@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, FileText, Sparkles, CheckCircle2, Award, Lock, Crown, ArrowRight } from 'lucide-react';
+import { Copy, Check, Download, FileText, Sparkles, CheckCircle2, Award, Lock, Crown, ArrowRight, Zap } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { ContactInfo } from '../types';
 
