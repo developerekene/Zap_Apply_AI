@@ -100,6 +100,21 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Close modal on Escape key press
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const currentPlan = PRICING_TIERS.find(p => p.id === selectedPlanId) || PRICING_TIERS[1];
@@ -264,17 +279,24 @@ At Zap.AI, we are dedicated to helping you land your dream job faster.`,
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 cursor-default"
+    >
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 my-8">
         
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 sm:p-8 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-            title="Close"
+            className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/30 text-white border border-white/20 transition-all flex items-center space-x-1.5 text-xs font-bold shadow-sm cursor-pointer"
+            title="Close modal (Esc)"
+            aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
+            <span>Close</span>
           </button>
 
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 mb-3">
@@ -606,6 +628,17 @@ At Zap.AI, we are dedicated to helping you land your dream job faster.`,
               <span>Unified Global Checkout</span>
               <span>•</span>
               <span>Instant Activation</span>
+            </div>
+
+            {/* Bottom Dismiss / Close Button */}
+            <div className="pt-2 text-center border-t border-slate-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Maybe Later • Continue with Free Plan
+              </button>
             </div>
           </div>
 

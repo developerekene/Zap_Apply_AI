@@ -25,6 +25,7 @@ interface NavbarProps {
   upcomingInterviewsCount: number;
   isPro?: boolean;
   onOpenUpgradeModal?: () => void;
+  profileEmail?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -37,7 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   totalApplicationsCount,
   upcomingInterviewsCount,
   isPro = false,
-  onOpenUpgradeModal
+  onOpenUpgradeModal,
+  profileEmail = ''
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<'resume' | 'apps' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -244,20 +246,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             {googleToken ? (
-              <div className="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span className="hidden sm:inline">Calendar Sync Active</span>
-                <span className="sm:hidden">Calendar Sync</span>
+              <div
+                className="flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-800"
+                title={`Google Calendar connected with ${profileEmail || 'your profile'}`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="hidden lg:inline font-semibold">Calendar: {profileEmail || 'Active'}</span>
+                <span className="lg:hidden">Calendar Linked</span>
               </div>
             ) : (
               <button
                 id="btn-connect-google-calendar"
                 onClick={onConnectGoogle}
                 disabled={isConnectingGoogle}
-                className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-xs disabled:opacity-50"
-                title="Connect Google Calendar for seamless interview scheduling and follow-up reminders"
+                className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                title={`Connect Google Calendar using ${profileEmail || 'your email'}`}
               >
-                <CalendarPlus className="w-4 h-4 text-indigo-600" />
+                <CalendarPlus className="w-3.5 h-3.5 text-indigo-600" />
                 <span className="hidden sm:inline">{isConnectingGoogle ? 'Connecting...' : 'Connect Calendar'}</span>
                 <span className="sm:hidden">Connect</span>
               </button>
