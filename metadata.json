@@ -1,0 +1,6 @@
+{
+  "name": "Zap.AI",
+  "description": "Smart AI tool for ATS-compliant resume tailoring, cover letter generation, job tracking, and calendar scheduling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

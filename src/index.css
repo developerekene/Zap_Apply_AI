@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide navigation, buttons, and applet frame chrome during print */
+  header, nav, footer, button, .no-print, [role="banner"], [role="navigation"] {
+    display: none !important;
+  }
+
+  #ats-resume-document {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    min-height: auto !important;
+  }
+
+  .pdf-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
