@@ -116,15 +116,17 @@ export default function App() {
 
   // Connect Google Calendar via OAuth using Profile Email
   const handleConnectGoogle = async () => {
+    if (isConnectingGoogle) return;
     setIsConnectingGoogle(true);
     const candidateEmail = masterProfile?.contactInfo?.email || '';
     try {
       const token = await requestGoogleCalendarToken(candidateEmail);
-      setGoogleToken(token);
+      if (token) {
+        setGoogleToken(token);
+      }
     } catch (err: any) {
-      console.error('Failed to connect Google Calendar:', err);
-      // Even if popup is blocked in sandbox iframe, enable local sync with profile email
-      setGoogleToken(`zap_sync_${Date.now()}`);
+      console.warn('Google Calendar authorization was not completed or was cancelled:', err?.message || err);
+      // If user went back or cancelled, do not set token and restore clean initial state
     } finally {
       setIsConnectingGoogle(false);
     }

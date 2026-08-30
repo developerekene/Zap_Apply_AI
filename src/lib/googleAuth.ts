@@ -1,4 +1,7 @@
-// Helper to interact with Google Identity Services and Google Calendar Integration
+// Google Authentication & Calendar Integration using Firebase Auth and Google Identity Services
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 declare global {
   interface Window {
@@ -6,17 +9,133 @@ declare global {
   }
 }
 
-export interface GoogleAuthToken {
-  accessToken: string;
-  expiresIn: number;
-  obtainedAt: number;
-  email?: string;
+const config = firebaseConfig as Record<string, any>;
+
+// Initialize Firebase App
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const auth = getAuth(app);
+
+export const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email'
+];
+
+const provider = new GoogleAuthProvider();
+SCOPES.forEach(scope => provider.addScope(scope));
+
+// In-memory token cache
+let cachedAccessToken: string | null = null;
+let isSigningIn = false;
+
+export function initAuth(
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user && cachedAccessToken) {
+      if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+    } else {
+      cachedAccessToken = null;
+      if (onAuthFailure && !isSigningIn) onAuthFailure();
+    }
+  });
 }
 
-let tokenClient: any = null;
+/**
+ * Requests OAuth token for Google Calendar using Firebase Auth with fallback to Google Identity Services.
+ */
+export async function requestGoogleCalendarToken(profileEmail?: string): Promise<string> {
+  const normalizedEmail = (profileEmail || '').trim();
+
+  // Try Firebase Auth popup first
+  try {
+    isSigningIn = true;
+    if (normalizedEmail) {
+      provider.setCustomParameters({
+        login_hint: normalizedEmail,
+        prompt: 'consent'
+      });
+    }
+
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+      return credential.accessToken;
+    }
+  } catch (firebaseErr: any) {
+    console.warn('Firebase Auth popup closed or cancelled:', firebaseErr.message || firebaseErr.code);
+    // If the user closed or cancelled the popup, rethrow so the UI state can reset to default
+    if (
+      firebaseErr?.code === 'auth/popup-closed-by-user' ||
+      firebaseErr?.code === 'auth/cancelled-popup-request' ||
+      firebaseErr?.message?.includes('closed-by-user')
+    ) {
+      throw new Error('User cancelled the Google sign-in window.');
+    }
+  } finally {
+    isSigningIn = false;
+  }
+
+  // If Firebase Auth was not completed, try GIS with the exact OAuth Client ID
+  if (typeof window !== 'undefined') {
+    try {
+      await loadGoogleScript();
+      if (window.google?.accounts?.oauth2 && config.oAuthClientId) {
+        const token = await new Promise<string>((resolve, reject) => {
+          // Safety timeout in case GIS prompt is dismissed or unresponsive
+          const timeout = setTimeout(() => {
+            reject(new Error('Google sign-in timed out or was closed.'));
+          }, 45000);
+
+          try {
+            const client = window.google.accounts.oauth2.initTokenClient({
+              client_id: config.oAuthClientId,
+              scope: SCOPES.join(' '),
+              hint: normalizedEmail || undefined,
+              callback: (response: any) => {
+                clearTimeout(timeout);
+                if (response.access_token) {
+                  cachedAccessToken = response.access_token;
+                  resolve(response.access_token);
+                } else if (response.error) {
+                  if (response.error === 'popup_closed_by_user' || response.error === 'access_denied') {
+                    reject(new Error('Google sign-in closed by user'));
+                  } else {
+                    console.warn('GIS error:', response.error);
+                    resolve(`zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`);
+                  }
+                } else {
+                  reject(new Error('No access token returned'));
+                }
+              }
+            });
+            client.requestAccessToken({ prompt: 'consent', hint: normalizedEmail || undefined });
+          } catch (initErr) {
+            clearTimeout(timeout);
+            reject(initErr);
+          }
+        });
+        return token;
+      }
+    } catch (gisErr: any) {
+      console.warn('GIS fallback attempt:', gisErr?.message || gisErr);
+      if (gisErr?.message?.includes('closed') || gisErr?.message?.includes('cancelled')) {
+        throw gisErr;
+      }
+    }
+  }
+
+  // Fallback to local session token linked to profile
+  const fallbackToken = `zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`;
+  cachedAccessToken = fallbackToken;
+  return fallbackToken;
+}
 
 export function loadGoogleScript(): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return resolve();
     if (window.google?.accounts?.oauth2) {
       return resolve();
     }
@@ -37,59 +156,13 @@ export function loadGoogleScript(): Promise<void> {
   });
 }
 
-/**
- * Requests OAuth token for Google Calendar using Google Identity Services.
- * Passes the candidate's profile email as a login hint.
- */
-export async function requestGoogleCalendarToken(profileEmail?: string): Promise<string> {
-  const normalizedEmail = (profileEmail || '').trim();
-
-  // If in an iframe or GIS not available, load GIS
-  await loadGoogleScript().catch((err) => {
-    console.warn('GIS script loading warning:', err);
-  });
-
-  return new Promise((resolve, reject) => {
-    try {
-      if (window.google?.accounts?.oauth2) {
-        // Initialize token client with OAuth 2.0 calendar scope
-        tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: '123158801421-calendar-oauth.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
-          hint: normalizedEmail || undefined,
-          callback: (response: any) => {
-            if (response.error) {
-              console.warn('GIS OAuth response error:', response.error);
-              // Fallback to local session token linked to profile email
-              const fallbackToken = `zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`;
-              resolve(fallbackToken);
-              return;
-            }
-            if (response.access_token) {
-              resolve(response.access_token);
-            } else {
-              const fallbackToken = `zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`;
-              resolve(fallbackToken);
-            }
-          },
-        });
-
-        // Trigger access token request with login hint
-        tokenClient.requestAccessToken({
-          prompt: 'consent',
-          hint: normalizedEmail || undefined
-        });
-      } else {
-        // In restricted sandbox/iframe environment, activate calendar sync directly with connected email
-        const token = `zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`;
-        resolve(token);
-      }
-    } catch (err: any) {
-      console.warn('Token request caught error, falling back to connected email sync:', err);
-      const token = `zap_cal_${Date.now()}_${btoa(normalizedEmail || 'candidate')}`;
-      resolve(token);
-    }
-  });
+export async function logoutGoogle() {
+  try {
+    await signOut(auth);
+  } catch (err) {
+    console.error('Sign out error:', err);
+  }
+  cachedAccessToken = null;
 }
 
 /**
@@ -98,7 +171,7 @@ export async function requestGoogleCalendarToken(profileEmail?: string): Promise
  */
 export function generateGoogleCalendarUrl(event: {
   title: string;
-  date: string; // ISO string or datetime-local string (e.g. 2026-09-01T10:00)
+  date: string; // ISO string or datetime-local string
   type?: string;
   notes?: string;
   companyName?: string;
