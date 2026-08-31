@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Check, Zap, Shield, Sparkles, Star, ArrowRight, CheckCircle2, Globe, CreditCard } from 'lucide-react';
+import { X, Check, Zap, Shield, Sparkles, Star, ArrowRight, CheckCircle2, Globe, CreditCard, Crown } from 'lucide-react';
 import PaystackPop from '@paystack/inline-js';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import emailjs from 'emailjs-com';
+import { checkIsAdmin } from '../mockData';
 
 const SERVICE_ID = "service_o1jbklr";
 const TEMPLATE_ID = "template_p8h58ur";
@@ -119,6 +120,7 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
 
   const currentPlan = PRICING_TIERS.find(p => p.id === selectedPlanId) || PRICING_TIERS[1];
   const currentPrice = currentPlan.prices[selectedCurrency];
+  const isAdmin = checkIsAdmin(email) || checkIsAdmin(defaultEmail);
 
   const generateReferenceNumber = (prefix = "ZAP"): string => {
     const timestamp = Date.now().toString(36);
@@ -338,6 +340,35 @@ At Zap.AI, we are dedicated to helping you land your dream job faster.`,
 
         {/* Content Body */}
         <div className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+
+          {/* Admin VIP Lifetime Pass Banner */}
+          {isAdmin && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 border-2 border-purple-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-900 shadow-xs">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <Crown className="w-5 h-5 fill-amber-200 text-amber-200" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-purple-950 flex items-center gap-1.5">
+                    Admin VIP Account Detected ({email || defaultEmail || 'seniordevekene@gmail.com'})
+                  </h4>
+                  <p className="text-[11px] text-purple-800 font-medium">
+                    You have permanent, unrestricted lifetime access to all Zap.AI Pro features with $0 billing.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onPaymentSuccess('ADMIN-LIFETIME-ACCESS', 'quarterly', email || defaultEmail || 'seniordevekene@gmail.com');
+                  onClose();
+                }}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs shadow-md transition-all whitespace-nowrap cursor-pointer"
+              >
+                Activate Free Admin Pass
+              </button>
+            </div>
+          )}
 
           {notification && (
             <div

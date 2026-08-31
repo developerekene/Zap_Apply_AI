@@ -28,6 +28,7 @@ interface NavbarProps {
   totalApplicationsCount: number;
   upcomingInterviewsCount: number;
   isPro?: boolean;
+  isAdmin?: boolean;
   onOpenUpgradeModal?: () => void;
   profileEmail?: string;
 }
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   totalApplicationsCount,
   upcomingInterviewsCount,
   isPro = false,
+  isAdmin = false,
   onOpenUpgradeModal,
   profileEmail = ''
 }) => {
@@ -280,7 +282,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Pro Status / Upgrade & Google Calendar Auth */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Pro Badge or Upgrade CTA */}
-            {isPro ? (
+            {isAdmin ? (
+              <div
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white font-extrabold text-xs shadow-md"
+                title={`Master Admin Access: ${profileEmail || 'seniordevekene@gmail.com'} (Lifetime Free Pro Unlocked)`}
+              >
+                <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
+                <span className="hidden sm:inline">ADMIN VIP</span>
+                <span className="sm:hidden">ADMIN</span>
+              </div>
+            ) : isPro ? (
               <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-extrabold text-xs shadow-xs">
                 <Crown className="w-3.5 h-3.5 fill-white text-white" />
                 <span className="hidden sm:inline">PRO ACTIVE</span>

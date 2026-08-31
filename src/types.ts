@@ -29,7 +29,7 @@ export interface EducationItem {
   fieldOfStudy: string;
   startDate: string;
   endDate: string;
-  location: string;
+  location?: string;
   gpa?: string;
 }
 

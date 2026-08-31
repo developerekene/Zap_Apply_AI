@@ -28,6 +28,15 @@ SCOPES.forEach(scope => provider.addScope(scope));
 let cachedAccessToken: string | null = null;
 let isSigningIn = false;
 
+export async function disconnectGoogleAuth(): Promise<void> {
+  cachedAccessToken = null;
+  try {
+    await signOut(auth);
+  } catch (e) {
+    // Ignore signout errors
+  }
+}
+
 export function initAuth(
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void

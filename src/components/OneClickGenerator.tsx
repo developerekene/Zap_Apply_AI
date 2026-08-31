@@ -1,10 +1,63 @@
-import React, { useState } from 'react';
-import { Zap, Sparkles, FileText, Target, Mail, ArrowRight, Save, Calendar, CheckCircle2, AlertCircle, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Zap,
+  Sparkles,
+  FileText,
+  Target,
+  Mail,
+  ArrowRight,
+  Save,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  Award,
+  Loader2,
+  Search,
+  Check
+} from 'lucide-react';
 import { ResumeData, TailoredApplication } from '../types';
 import { ResumePdfViewer } from './ResumePdfViewer';
 import { CoverLetterView } from './CoverLetterView';
 import { PersonalStatementView } from './PersonalStatementView';
 import { AtsOptimizerView } from './AtsOptimizerView';
+
+const GENERATION_STAGES = [
+  {
+    step: 1,
+    title: 'Extracting Job Keywords & Criteria',
+    shortLabel: 'Job Analysis',
+    desc: 'Scanning requirements, tech stack, and critical qualifications...',
+    icon: Search
+  },
+  {
+    step: 2,
+    title: 'Matching Candidate Experience & Strengths',
+    shortLabel: 'Profile Alignment',
+    desc: 'Cross-referencing background with target competencies...',
+    icon: Target
+  },
+  {
+    step: 3,
+    title: 'Tailoring ATS-Compliant Resume Experience',
+    shortLabel: 'Resume Crafting',
+    desc: 'Formulating quantifiable XYZ achievements and impact metrics...',
+    icon: FileText
+  },
+  {
+    step: 4,
+    title: 'Drafting Cover Letter & STAR Statement',
+    shortLabel: 'Cover Letter & Pitch',
+    desc: 'Writing personalized enthusiasm hook and STAR narrative...',
+    icon: Mail
+  },
+  {
+    step: 5,
+    title: 'Auditing ATS Match Score & Finalizing',
+    shortLabel: 'ATS Audit & Finalize',
+    desc: 'Calculating keyword match score and formatting package...',
+    icon: Award
+  }
+];
 
 interface OneClickGeneratorProps {
   masterProfile: ResumeData;
@@ -46,6 +99,28 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   const [customPrompt, setCustomPrompt] = useState('');
   const [outputTab, setOutputTab] = useState<'resume' | 'cover' | 'statement' | 'ats'>('resume');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+  const [stageIndex, setStageIndex] = useState(0);
+
+  // Cycle through generation stages when AI is tailoring
+  useEffect(() => {
+    if (!isGenerating) {
+      setStageIndex(0);
+      return;
+    }
+
+    setStageIndex(0);
+
+    const timeouts = [
+      setTimeout(() => setStageIndex(1), 2200), // Step 2: Matching
+      setTimeout(() => setStageIndex(2), 5200), // Step 3: Resume Tailoring
+      setTimeout(() => setStageIndex(3), 8800), // Step 4: Cover Letter & Statement
+      setTimeout(() => setStageIndex(4), 12500) // Step 5: ATS Scoring & Finalizing
+    ];
+
+    return () => {
+      timeouts.forEach(t => clearTimeout(t));
+    };
+  }, [isGenerating]);
 
   const handleClearForm = () => {
     setJobTitle('');
@@ -58,6 +133,13 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   const handleRunTailor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobDescription.trim()) return;
+
+    if (!masterProfile.contact.fullName.trim() && (!masterProfile.experience || masterProfile.experience.length === 0)) {
+      if (confirm('Your Master Candidate Profile is currently empty. Would you like to update your profile with your contact details, experience, and skills first for the best tailoring results?')) {
+        if (onGoToProfile) onGoToProfile();
+        return;
+      }
+    }
 
     const result = await onGenerateTailoredApp({
       jobTitle: jobTitle.trim(),
@@ -78,6 +160,16 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 3000);
   };
+
+  const isProfileEmpty =
+    !masterProfile?.contact?.fullName?.trim() &&
+    (!masterProfile?.experience || masterProfile.experience.length === 0) &&
+    !masterProfile?.summary?.trim();
+
+  const isProfileIncomplete =
+    !masterProfile?.contact?.fullName?.trim() ||
+    !masterProfile?.summary?.trim() ||
+    (!masterProfile?.experience || masterProfile.experience.length === 0);
 
   return (
     <div className="space-y-6">
@@ -105,15 +197,40 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
           )}
         </div>
 
-        {/* Empty Master Profile Alert Banner */}
-        {(!masterProfile.contact.fullName && masterProfile.experience.length === 0) && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        {/* Profile Alert Banner */}
+        {isProfileEmpty ? (
+          <div className="bg-indigo-50 border-2 border-indigo-200 text-indigo-950 rounded-2xl p-5 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-sm text-indigo-950">Action Required: Please set up your Master Profile</h4>
+                <p className="text-indigo-800 leading-relaxed">
+                  Your Master Profile is currently empty. To tailor resumes, cover letters, and statements that accurately match your career, please update your candidate details or upload your CV.
+                </p>
+              </div>
+            </div>
+            {onGoToProfile && (
+              <button
+                type="button"
+                id="btn-banner-setup-profile"
+                onClick={onGoToProfile}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md transition-all whitespace-nowrap cursor-pointer flex items-center justify-center space-x-2 shrink-0"
+              >
+                <span>Update Master Profile</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ) : isProfileIncomplete ? (
+          <div className="bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-start space-x-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Your Master Profile is currently empty.</p>
+                <p className="font-bold text-amber-900">Your Master Profile is missing key sections</p>
                 <p className="text-amber-800">
-                  Add your contact info, work experience, and skills in <strong className="text-amber-950">Master Candidate Profile</strong> or parse your existing resume text for personalized tailoring results.
+                  Adding your work history, skills, and summary in <strong className="text-amber-950">Master Profile</strong> ensures highest-score ATS tailoring.
                 </p>
               </div>
             </div>
@@ -121,16 +238,53 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               <button
                 type="button"
                 onClick={onGoToProfile}
-                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shrink-0 transition-colors"
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors cursor-pointer"
               >
-                Set Up Profile →
+                Update Profile →
               </button>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* Input Form - Single Big Input */}
         <form onSubmit={handleRunTailor} className="space-y-4">
+          {/* Profile Status Pill */}
+          {isProfileEmpty ? (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span><strong>Profile Status:</strong> Blank profile. Please update your master profile for accurate tailoring.</span>
+              </div>
+              {onGoToProfile && (
+                <button
+                  type="button"
+                  onClick={onGoToProfile}
+                  className="font-bold text-indigo-700 hover:text-indigo-900 underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Update Profile</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900">
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Master Profile Active:</strong> {masterProfile.contact.fullName || 'Candidate'} ({masterProfile.experience?.length || 0} positions, {masterProfile.skills?.technical?.length || 0} technical skills)
+                </span>
+              </div>
+              {onGoToProfile && (
+                <button
+                  type="button"
+                  onClick={onGoToProfile}
+                  className="font-semibold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              )}
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -162,17 +316,140 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
             />
           </div>
 
-          <div className="flex justify-end pt-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            {/* Status indicator on the left side of form bottom */}
+            {isGenerating ? (
+              <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-3.5 py-2.5 rounded-xl">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-600 shrink-0" />
+                <span>
+                  Stage {stageIndex + 1} of {GENERATION_STAGES.length}: {GENERATION_STAGES[stageIndex].title}...
+                </span>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-500 hidden sm:flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Generates ATS Resume + Cover Letter + STAR Statement in seconds</span>
+              </div>
+            )}
+
             <button
               type="submit"
               id="btn-generate-tailored-application"
               disabled={isGenerating || !jobDescription.trim()}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-lg shadow-indigo-600/25 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+              className={`w-full sm:w-auto relative overflow-hidden flex items-center justify-center space-x-2.5 px-6 sm:px-8 py-3.5 rounded-xl text-white font-extrabold text-sm shadow-lg transition-all ${
+                isGenerating
+                  ? 'bg-slate-900 shadow-indigo-900/30 ring-2 ring-indigo-500/60 cursor-wait'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25 transform hover:-translate-y-0.5 cursor-pointer'
+              } disabled:opacity-75`}
             >
-              <Zap className="w-5 h-5 fill-white text-white" />
-              <span>{isGenerating ? 'AI Tailoring Complete Application...' : '1-Click Tailor Resume, Cover Letter & Statement'}</span>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-left sm:text-center">
+                    <span className="text-indigo-300 text-[11px] uppercase tracking-wider font-black">
+                      Step {stageIndex + 1}/{GENERATION_STAGES.length}
+                    </span>
+                    <span className="text-white font-bold text-xs sm:text-sm">
+                      {GENERATION_STAGES[stageIndex].shortLabel}...
+                    </span>
+                  </div>
+                  {/* Real-time progress line inside the button */}
+                  <div
+                    className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-indigo-500 via-indigo-400 to-emerald-400 transition-all duration-700 ease-out"
+                    style={{ width: `${((stageIndex + 1) / GENERATION_STAGES.length) * 100}%` }}
+                  />
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 fill-white text-white" />
+                  <span>Start Generation</span>
+                </>
+              )}
             </button>
           </div>
+
+          {/* Staged Generation Live Progress Checklist Card */}
+          {isGenerating && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-indigo-300 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+                      Tailoring Complete Application Package
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                        {Math.round(((stageIndex + 1) / GENERATION_STAGES.length) * 100)}% Complete
+                      </span>
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-indigo-200/80">
+                      {GENERATION_STAGES[stageIndex].desc}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right hidden md:block">
+                  <span className="text-base font-black text-indigo-300">
+                    Stage {stageIndex + 1} of {GENERATION_STAGES.length}
+                  </span>
+                  <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {GENERATION_STAGES[stageIndex].shortLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step by step stages */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-1">
+                {GENERATION_STAGES.map((st, idx) => {
+                  const isDone = idx < stageIndex;
+                  const isCurrent = idx === stageIndex;
+                  const Icon = st.icon;
+                  return (
+                    <div
+                      key={st.step}
+                      className={`p-2.5 rounded-xl border transition-all text-xs flex sm:flex-col items-center sm:items-start space-x-2.5 sm:space-x-0 sm:space-y-1.5 ${
+                        isDone
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                          : isCurrent
+                          ? 'bg-indigo-900/80 border-indigo-400 text-white ring-2 ring-indigo-400/50 shadow-md shadow-indigo-950'
+                          : 'bg-slate-800/40 border-slate-700/50 text-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            isDone
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : isCurrent
+                              ? 'bg-indigo-500 text-white'
+                              : 'bg-slate-700/50 text-slate-400'
+                          }`}
+                        >
+                          {isDone ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : isCurrent ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                          ) : (
+                            <Icon className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold opacity-60 hidden sm:inline">0{st.step}</span>
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs leading-snug">
+                          {st.shortLabel}
+                        </div>
+                        <div className="text-[10px] text-slate-300/80 sm:hidden">
+                          {isDone ? 'Completed' : isCurrent ? 'Working...' : 'Pending'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </form>
       </div>
 
