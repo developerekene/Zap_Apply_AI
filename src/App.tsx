@@ -136,6 +136,19 @@ export default function App() {
     }
   };
 
+  // Disconnect / Unlink Google Calendar
+  const handleDisconnectGoogle = async () => {
+    if (confirm('Are you sure you want to unlink Google Calendar from this application? You can reconnect at any time.')) {
+      setGoogleToken(null);
+      localStorage.removeItem('zap_google_token');
+      try {
+        await disconnectGoogleAuth();
+      } catch (e) {
+        // Ignore disconnect errors
+      }
+    }
+  };
+
   // 1-Click Tailor Application AI Generator
   const handleGenerateTailoredApp = async (payload: {
     jobDescription: string;
@@ -201,13 +214,23 @@ export default function App() {
   };
 
   // Parse Resume (PDF or raw text) with Gemini AI
-  const handleParseResumeData = async (payload: { rawText?: string; fileBase64?: string; fileMimeType?: string }) => {
+  const handleParseResumeData = async (payload: {
+    rawText?: string;
+    fileBase64?: string;
+    fileMimeType?: string;
+    fileName?: string;
+    fileSize?: string;
+  }) => {
     setIsParsing(true);
     try {
       const res = await fetch('/api/gemini/parse-resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          rawText: payload.rawText,
+          fileBase64: payload.fileBase64,
+          fileMimeType: payload.fileMimeType
+        })
       });
 
       const responseData = await res.json();
@@ -215,9 +238,14 @@ export default function App() {
         throw new Error(responseData.error || 'Failed to parse resume text.');
       }
 
-      const parsedResume: ResumeData = responseData.data;
+      const parsedResume: ResumeData = {
+        ...responseData.data,
+        attachedCvFileName: payload.fileName || (payload.fileBase64 ? 'Uploaded_CV.pdf' : (payload.rawText ? 'Imported Resume Text' : undefined)),
+        attachedCvDate: new Date().toLocaleDateString(),
+        attachedCvSize: payload.fileSize || ''
+      };
       setMasterProfile(parsedResume);
-      alert('Resume parsed successfully! Your Master Candidate Profile has been populated.');
+      alert('Resume parsed successfully! Your Master Candidate Profile and attached CV have been loaded.');
     } catch (err: any) {
       console.error('Parse resume error:', err);
       alert('Error parsing resume: ' + err.message);
@@ -321,19 +349,10 @@ export default function App() {
   };
 
   const handleResetProfile = async () => {
-    if (confirm('Are you sure you want to completely clear your Master Profile and reset your Calendar connection? This will wipe your summary & bio, contact details, work experience, skills & tech, education, and disconnect Google Calendar from this device.')) {
-      setMasterProfile(emptyMasterProfile);
-      setGoogleToken(null);
-      localStorage.setItem('zap_master_profile_clean', JSON.stringify(emptyMasterProfile));
-      localStorage.removeItem('zap_master_profile');
-      localStorage.removeItem('zap_master_profile_v2');
-      localStorage.removeItem('zap_google_token');
-      try {
-        await disconnectGoogleAuth();
-      } catch (e) {
-        // Ignore disconnect errors
-      }
-    }
+    setMasterProfile(emptyMasterProfile);
+    localStorage.setItem('zap_master_profile_clean', JSON.stringify(emptyMasterProfile));
+    localStorage.removeItem('zap_master_profile');
+    localStorage.removeItem('zap_master_profile_v2');
   };
 
   const handleSelectApplicationForView = (app: TailoredApplication) => {
@@ -359,6 +378,7 @@ export default function App() {
         googleUser={null}
         googleToken={googleToken}
         onConnectGoogle={handleConnectGoogle}
+        onDisconnectGoogle={handleDisconnectGoogle}
         isConnectingGoogle={isConnectingGoogle}
         totalApplicationsCount={applications.length}
         upcomingInterviewsCount={upcomingInterviewsCount}
@@ -455,6 +475,7 @@ export default function App() {
         application={selectedAppForCalendar}
         googleToken={googleToken}
         onConnectGoogle={handleConnectGoogle}
+        onDisconnectGoogle={handleDisconnectGoogle}
         onAddCalendarEvent={handleAddCalendarEvent}
         isPro={isEffectivePro}
         onRequirePro={handleOpenUpgradeModal}

@@ -56,6 +56,9 @@ export interface ResumeData {
   skills: SkillsCategory;
   projects: ProjectItem[];
   strengths?: string[];
+  attachedCvFileName?: string;
+  attachedCvDate?: string;
+  attachedCvSize?: string;
 }
 
 export interface AtsAnalysis {

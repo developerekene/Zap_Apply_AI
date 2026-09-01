@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   UserCheck,
-  Check
+  Check,
+  Unlink
 } from 'lucide-react';
 import { GoogleUserInfo } from '../types';
 
@@ -24,6 +25,7 @@ interface NavbarProps {
   googleUser: GoogleUserInfo | null;
   googleToken: string | null;
   onConnectGoogle: () => void;
+  onDisconnectGoogle?: () => void;
   isConnectingGoogle: boolean;
   totalApplicationsCount: number;
   upcomingInterviewsCount: number;
@@ -39,6 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   googleUser,
   googleToken,
   onConnectGoogle,
+  onDisconnectGoogle,
   isConnectingGoogle,
   totalApplicationsCount,
   upcomingInterviewsCount,
@@ -310,12 +313,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {googleToken ? (
               <div
-                className="flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-emerald-800"
+                className="flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 pl-2.5 pr-1.5 py-1 rounded-xl text-xs font-medium text-emerald-800"
                 title={`Google Calendar connected with ${profileEmail || 'your profile'}`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span className="hidden lg:inline font-semibold">Calendar: {profileEmail || 'Active'}</span>
-                <span className="lg:hidden text-[11px] sm:text-xs">Linked</span>
+                <span className="lg:hidden text-[11px] sm:text-xs font-semibold">Linked</span>
+                {onDisconnectGoogle && (
+                  <button
+                    type="button"
+                    id="btn-unlink-google-calendar"
+                    onClick={onDisconnectGoogle}
+                    className="ml-1 px-2 py-0.5 text-[11px] font-bold text-rose-600 hover:text-white hover:bg-rose-600 rounded-lg transition-colors cursor-pointer"
+                    title="Unlink Google Calendar from this app"
+                  >
+                    Unlink
+                  </button>
+                )}
               </div>
             ) : (
               <button
@@ -374,9 +388,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="pt-2 border-t border-slate-100 px-3 flex items-center justify-between text-xs text-slate-500">
               <span>Calendar Sync:</span>
               {googleToken ? (
-                <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> {profileEmail || 'Connected'}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> {profileEmail || 'Connected'}
+                  </span>
+                  {onDisconnectGoogle && (
+                    <button
+                      type="button"
+                      id="btn-unlink-google-calendar-mobile"
+                      onClick={onDisconnectGoogle}
+                      className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                    >
+                      Unlink
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={onConnectGoogle}

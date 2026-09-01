@@ -9,6 +9,7 @@ interface GoogleCalendarSyncModalProps {
   application: TailoredApplication | null;
   googleToken: string | null;
   onConnectGoogle: () => void;
+  onDisconnectGoogle?: () => void;
   onAddCalendarEvent: (appId: string, event: {
     title: string;
     date: string;
@@ -26,6 +27,7 @@ export const GoogleCalendarSyncModal: React.FC<GoogleCalendarSyncModalProps> = (
   application,
   googleToken,
   onConnectGoogle,
+  onDisconnectGoogle,
   onAddCalendarEvent,
   isPro = false,
   onRequirePro,
@@ -148,9 +150,22 @@ export const GoogleCalendarSyncModal: React.FC<GoogleCalendarSyncModalProps> = (
               <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
               <span className="truncate">Profile Email: <strong className="font-bold">{profileEmail}</strong></span>
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
-              <Check className="w-3 h-3" /> Linked
-            </span>
+            <div className="flex items-center space-x-2 shrink-0">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
+                <Check className="w-3 h-3" /> Linked
+              </span>
+              {googleToken && onDisconnectGoogle && (
+                <button
+                  type="button"
+                  id="btn-modal-unlink-gcal"
+                  onClick={onDisconnectGoogle}
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                  title="Unlink Google Calendar"
+                >
+                  Unlink
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -1,7 +1,6 @@
 // Google Authentication & Calendar Integration using Firebase Auth and Google Identity Services
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User, Auth } from 'firebase/auth';
 
 declare global {
   interface Window {
@@ -9,11 +8,35 @@ declare global {
   }
 }
 
-const config = firebaseConfig as Record<string, any>;
+// Built-in fallback config if firebase-applet-config.json is absent
+const defaultFirebaseConfig: Record<string, any> = {
+  projectId: 'zap-ai-studio',
+  appId: '1:252111450112:web:zap-ai',
+  apiKey: 'AIzaSyFakeKeyForPreviewAuth',
+  authDomain: 'zap-ai-studio.firebaseapp.com',
+  firestoreDatabaseId: '(default)',
+  storageBucket: 'zap-ai-studio.appspot.com',
+  messagingSenderId: '252111450112',
+  measurementId: '',
+  recaptchaSiteKey: '',
+  oAuthClientId: ''
+};
 
-// Initialize Firebase App
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
+// Safely load config if available
+const importMeta = import.meta as any;
+const configModules = typeof importMeta.glob === 'function' ? importMeta.glob('/*firebase-applet-config.json', { eager: true }) : {};
+const matchedConfig = (Object.values(configModules)[0] as any)?.default;
+const config: Record<string, any> = matchedConfig || defaultFirebaseConfig;
+
+// Initialize Firebase App safely
+let app: FirebaseApp;
+try {
+  app = getApps().length === 0 ? initializeApp(config) : getApp();
+} catch (e) {
+  app = initializeApp(defaultFirebaseConfig, 'zap-fallback');
+}
+
+export const auth: Auth = getAuth(app);
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',

@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
-import { FileText, Upload, Sparkles, Plus, Trash2, CheckCircle2, Edit3, Shield, Award, Briefcase, GraduationCap, Code } from 'lucide-react';
+import { FileText, Upload, Sparkles, Plus, Trash2, CheckCircle2, Edit3, Shield, Award, Briefcase, GraduationCap, Code, AlertCircle, FileCheck, RefreshCw } from 'lucide-react';
 import { ResumeData, ExperienceItem, EducationItem, ProjectItem } from '../types';
 
 interface MasterProfileEditorProps {
   masterProfile: ResumeData;
   onUpdateMasterProfile: (updated: ResumeData) => void;
-  onParseResumeRawText: (payload: { rawText?: string; fileBase64?: string; fileMimeType?: string }) => Promise<void>;
+  onParseResumeRawText: (payload: {
+    rawText?: string;
+    fileBase64?: string;
+    fileMimeType?: string;
+    fileName?: string;
+    fileSize?: string;
+  }) => Promise<void>;
   isParsing: boolean;
   onResetProfile?: () => void;
 }
+
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
 
 export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
   masterProfile,
@@ -21,10 +34,20 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
   const [pasteText, setPasteText] = useState('');
   const [activeSection, setActiveSection] = useState<'summary' | 'contact' | 'experience' | 'skills' | 'education'>('summary');
   const [isDragging, setIsDragging] = useState(false);
+  const [clearedAlert, setClearedAlert] = useState(false);
+
+  // Check if profile is essentially empty
+  const isProfileEmpty =
+    !masterProfile.contact?.fullName &&
+    !masterProfile.summary &&
+    (!masterProfile.experience || masterProfile.experience.length === 0) &&
+    (!masterProfile.skills?.technical || masterProfile.skills.technical.length === 0) &&
+    !masterProfile.attachedCvFileName;
 
   // Handle PDF file upload
   const handlePdfFileUpload = (file: File) => {
     if (!file) return;
+    setClearedAlert(false);
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       const reader = new FileReader();
@@ -35,7 +58,9 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
           const base64Data = result.split(',')[1] || result;
           await onParseResumeRawText({
             fileBase64: base64Data,
-            fileMimeType: 'application/pdf'
+            fileMimeType: 'application/pdf',
+            fileName: file.name,
+            fileSize: formatFileSize(file.size)
           });
         }
       };
@@ -46,7 +71,11 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
       reader.onload = async (e) => {
         const text = e.target?.result as string;
         if (text) {
-          await onParseResumeRawText({ rawText: text });
+          await onParseResumeRawText({
+            rawText: text,
+            fileName: file.name,
+            fileSize: formatFileSize(file.size)
+          });
         }
       };
       reader.readAsText(file);
@@ -68,9 +97,65 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
   // Handle parse submission from text modal
   const handleStartParseText = async () => {
     if (!pasteText.trim()) return;
-    await onParseResumeRawText({ rawText: pasteText });
+    setClearedAlert(false);
+    await onParseResumeRawText({
+      rawText: pasteText,
+      fileName: 'Pasted Resume Text',
+      fileSize: formatFileSize(new Blob([pasteText]).size)
+    });
     setRawTextModal(false);
     setPasteText('');
+  };
+
+  // Clear all profile data and remove attached CV
+  const handleClearProfileClick = () => {
+    if (
+      confirm(
+        'Are you sure you want to completely clear your Master Profile and remove your attached CV? This will delete all resume sections, contact info, experience, skills, education, and remove the attached CV file.'
+      )
+    ) {
+      if (onResetProfile) {
+        onResetProfile();
+      } else {
+        onUpdateMasterProfile({
+          summary: '',
+          targetRoles: [],
+          strengths: [],
+          contact: {
+            fullName: '',
+            email: '',
+            phone: '',
+            location: '',
+            address: '',
+            postCode: '',
+            country: '',
+            linkedin: '',
+            portfolio: ''
+          },
+          experience: [],
+          skills: { technical: [], soft: [], toolsAndFrameworks: [], certifications: [] },
+          education: [],
+          projects: [],
+          attachedCvFileName: undefined,
+          attachedCvDate: undefined,
+          attachedCvSize: undefined
+        });
+      }
+      setClearedAlert(true);
+    }
+  };
+
+  // Remove attached CV only
+  const handleRemoveAttachedCv = () => {
+    if (confirm('Are you sure you want to remove the attached CV file from your profile?')) {
+      onUpdateMasterProfile({
+        ...masterProfile,
+        attachedCvFileName: undefined,
+        attachedCvDate: undefined,
+        attachedCvSize: undefined
+      });
+      setClearedAlert(true);
+    }
   };
 
   // Update contact fields
@@ -153,25 +238,111 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
             <button
               id="btn-open-parser-modal"
               onClick={() => setRawTextModal(true)}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs transition-all shadow-md shadow-indigo-600/20 shrink-0"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs transition-all shadow-md shadow-indigo-600/20 shrink-0 cursor-pointer"
             >
               <Upload className="w-4 h-4" />
               <span>Parse New Resume / Import Text</span>
             </button>
-            {onResetProfile && (
-              <button
-                type="button"
-                id="btn-clear-master-profile"
-                onClick={onResetProfile}
-                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 text-slate-600 border border-slate-300 font-bold text-xs transition-all shrink-0 cursor-pointer"
-                title="Completely clear all profile data from this device"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
-                <span>Clear Profile</span>
-              </button>
-            )}
+            <button
+              type="button"
+              id="btn-clear-master-profile"
+              onClick={handleClearProfileClick}
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 text-slate-600 border border-slate-300 font-bold text-xs transition-all shrink-0 cursor-pointer"
+              title="Completely clear all resume information and remove attached CV"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
+              <span>Clear Profile</span>
+            </button>
           </div>
         </div>
+
+        {/* Re-Upload Prompt Banner when Profile has been cleared */}
+        {clearedAlert && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 text-amber-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-start space-x-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-sm text-amber-950 flex items-center gap-2">
+                  Profile & CV Cleared
+                </h4>
+                <p className="text-xs text-amber-850 leading-relaxed max-w-xl">
+                  All resume information and attached CV files have been wiped from this device. Please <strong>re-upload your CV (PDF / DOCX)</strong> below or paste your resume text to build a fresh candidate profile.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 self-stretch md:self-auto justify-end shrink-0">
+              <label className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center space-x-1.5">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload New CV</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  disabled={isParsing}
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setRawTextModal(true)}
+                className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition-colors cursor-pointer"
+              >
+                Paste Text
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Attached CV Document Card */}
+        {masterProfile.attachedCvFileName && (
+          <div className="bg-gradient-to-r from-indigo-50/90 via-slate-50 to-indigo-50/50 border-2 border-indigo-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center space-x-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
+                <FileCheck className="w-6 h-6" />
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-extrabold text-sm text-slate-900 truncate">
+                    {masterProfile.attachedCvFileName}
+                  </h4>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                    Attached CV
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Uploaded on {masterProfile.attachedCvDate || 'Recently'}{' '}
+                  {masterProfile.attachedCvSize ? `• ${masterProfile.attachedCvSize}` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 self-end sm:self-auto shrink-0">
+              <label className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center space-x-1.5">
+                <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Replace CV</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  disabled={isParsing}
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+              </label>
+              <button
+                type="button"
+                id="btn-remove-attached-cv"
+                onClick={handleRemoveAttachedCv}
+                className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                title="Remove attached CV document"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove CV</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Drag & Drop PDF Resume Import Dropzone */}
         <div
@@ -195,10 +366,16 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
 
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-slate-900">
-                {isParsing ? 'Analyzing CV PDF with Gemini AI...' : 'Upload or Drag & Drop PDF Resume'}
+                {isParsing
+                  ? 'Analyzing CV PDF with Gemini AI...'
+                  : masterProfile.attachedCvFileName
+                  ? 'Upload or Drag & Drop to Update CV File'
+                  : 'Upload or Drag & Drop Your CV / Resume (PDF, DOCX)'}
               </h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Upload your existing CV in PDF format (or .docx / .txt). Gemini will automatically extract your contact info, work history, skills, and education into the fields below.
+                {masterProfile.attachedCvFileName
+                  ? 'Upload a replacement CV to re-extract your contact info, work history, skills, and education.'
+                  : 'Upload your CV in PDF format (or .docx / .txt). Gemini AI will automatically parse all sections into your Master Profile.'}
               </p>
             </div>
 
