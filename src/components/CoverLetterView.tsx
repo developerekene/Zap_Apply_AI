@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, Mail, Sparkles, Lock } from 'lucide-react';
+import { Copy, Check, Download, Mail, Sparkles } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { ContactInfo } from '../types';
 
@@ -12,8 +12,6 @@ interface CoverLetterViewProps {
   onUpdateText: (newText: string) => void;
   onRegenerateTone?: (tone: string) => void;
   isGenerating?: boolean;
-  isPro?: boolean;
-  onRequirePro?: () => void;
 }
 
 export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
@@ -24,9 +22,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
   contact,
   onUpdateText,
   onRegenerateTone,
-  isGenerating = false,
-  isPro = false,
-  onRequirePro
+  isGenerating = false
 }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -76,20 +72,12 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
   const finalFormattedLetter = getFormattedLetterText();
 
   const handleCopy = () => {
-    if (!isPro) {
-      if (onRequirePro) onRequirePro();
-      return;
-    }
     navigator.clipboard.writeText(finalFormattedLetter);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadPdf = () => {
-    if (!isPro) {
-      if (onRequirePro) onRequirePro();
-      return;
-    }
     const doc = new jsPDF('p', 'mm', 'a4');
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(10.5);

@@ -31,7 +31,10 @@ export const emptyMasterProfile: ResumeData = {
     certifications: []
   },
   projects: [],
-  strengths: []
+  strengths: [],
+  attachedCvFileName: undefined,
+  attachedCvDate: undefined,
+  attachedCvSize: undefined
 };
 
 export const initialMasterProfile: ResumeData = {

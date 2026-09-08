@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, CheckCircle2, AlertTriangle, Sparkles, TrendingUp, ShieldCheck, Lock, ArrowRight, Crown } from 'lucide-react';
+import { Target, CheckCircle2, AlertTriangle, Sparkles, TrendingUp, ShieldCheck } from 'lucide-react';
 import { AtsAnalysis } from '../types';
 
 interface AtsOptimizerViewProps {
@@ -7,17 +7,13 @@ interface AtsOptimizerViewProps {
   jobTitle?: string;
   companyName?: string;
   onAddKeywordToResume?: (keyword: string) => void;
-  isPro?: boolean;
-  onRequirePro?: () => void;
 }
 
 export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
   atsAnalysis,
   jobTitle,
   companyName,
-  onAddKeywordToResume,
-  isPro = false,
-  onRequirePro
+  onAddKeywordToResume
 }) => {
   const score = atsAnalysis.score || 0;
 
@@ -96,25 +92,19 @@ export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
           </div>
         </div>
 
-        {/* Missing Keywords (Pro Gated) */}
-        <div className="relative bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 overflow-hidden">
+        {/* Missing Keywords */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="w-5 h-5 text-amber-600" />
               <h3 className="text-sm font-bold text-slate-900">Missing Critical Terms ({atsAnalysis.missingKeywords?.length || 0})</h3>
             </div>
-            {!isPro ? (
-              <span className="text-[10px] font-extrabold uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Lock className="w-3 h-3 text-indigo-600" /> PRO FEATURE
-              </span>
-            ) : (
-              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-semibold">
-                High Impact
-              </span>
-            )}
+            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-semibold">
+              High Impact
+            </span>
           </div>
 
-          <div className={`flex flex-wrap gap-2 pt-1 ${!isPro ? 'select-none blur-xs opacity-40 pointer-events-none' : ''}`}>
+          <div className="flex flex-wrap gap-2 pt-1">
             {(atsAnalysis.missingKeywords && atsAnalysis.missingKeywords.length > 0
               ? atsAnalysis.missingKeywords
               : ['Senior Leadership', 'TypeScript Architecture', 'Cross-Functional Strategy', 'CI/CD Pipelines', 'Performance Metrics']
@@ -124,10 +114,10 @@ export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
                 className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200"
               >
                 <span>{kw}</span>
-                {isPro && onAddKeywordToResume && (
+                {onAddKeywordToResume && (
                   <button
                     onClick={() => onAddKeywordToResume(kw)}
-                    className="text-[10px] bg-indigo-600 text-white font-bold px-1.5 py-0.2 rounded hover:bg-indigo-700 transition-colors"
+                    className="text-[10px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded hover:bg-indigo-700 transition-colors cursor-pointer"
                   >
                     + Add
                   </button>
@@ -135,26 +125,6 @@ export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
               </span>
             ))}
           </div>
-
-          {!isPro && (
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center text-white z-10">
-              <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg mb-2">
-                <Lock className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-extrabold">Exact Missing Keywords Locked</h4>
-              <p className="text-xs text-slate-200 max-w-xs mt-1 mb-3">
-                See the exact terms missing from your resume to pass ATS automated screening.
-              </p>
-              <button
-                onClick={onRequirePro}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center space-x-1.5"
-              >
-                <Crown className="w-3.5 h-3.5 fill-white text-white" />
-                <span>Unlock Missing Keywords</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -184,21 +154,16 @@ export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
           </div>
         </div>
 
-        {/* AI Actionable Recommendations (Pro Gated) */}
-        <div className="relative bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 overflow-hidden">
+        {/* AI Actionable Recommendations */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
               <h3 className="text-sm font-bold text-slate-900">Optimization Tips</h3>
             </div>
-            {!isPro && (
-              <span className="text-[10px] font-extrabold uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Lock className="w-3 h-3 text-indigo-600" /> PRO
-              </span>
-            )}
           </div>
 
-          <ul className={`space-y-2.5 text-xs text-slate-700 ${!isPro ? 'select-none blur-xs opacity-40 pointer-events-none' : ''}`}>
+          <ul className="space-y-2.5 text-xs text-slate-700">
             {(atsAnalysis.keyRecommendations && atsAnalysis.keyRecommendations.length > 0
               ? atsAnalysis.keyRecommendations
               : [
@@ -213,21 +178,6 @@ export const AtsOptimizerView: React.FC<AtsOptimizerViewProps> = ({
               </li>
             ))}
           </ul>
-
-          {!isPro && (
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center text-white z-10">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-md mb-2">
-                <Lock className="w-4 h-4" />
-              </div>
-              <h4 className="text-xs font-extrabold">Actionable Insights Locked</h4>
-              <button
-                onClick={onRequirePro}
-                className="mt-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] shadow-sm transition-all"
-              >
-                Upgrade to View Tips
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

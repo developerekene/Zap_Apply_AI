@@ -71,12 +71,7 @@ interface OneClickGeneratorProps {
   isGenerating: boolean;
   activeGeneratedApp: TailoredApplication | null;
   onSaveToTracker: (app: TailoredApplication) => void;
-  onOpenCalendarSchedule: (app: TailoredApplication) => void;
   onGoToProfile?: () => void;
-  isPro?: boolean;
-  freeDownloadsCount?: number;
-  onIncrementDownloadCount?: () => void;
-  onRequirePro?: () => void;
 }
 
 export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
@@ -85,12 +80,7 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   isGenerating,
   activeGeneratedApp,
   onSaveToTracker,
-  onOpenCalendarSchedule,
-  onGoToProfile,
-  isPro = false,
-  freeDownloadsCount = 0,
-  onIncrementDownloadCount,
-  onRequirePro
+  onGoToProfile
 }) => {
   const [jobTitle, setJobTitle] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -509,7 +499,7 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               </button>
             </div>
 
-            {/* Quick Actions: Save to Tracker & Schedule Interview */}
+            {/* Quick Actions: Save to Tracker */}
             <div className="flex items-center space-x-3">
               {saveSuccessMsg && (
                 <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
@@ -520,19 +510,10 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               <button
                 id="btn-save-application-tracker"
                 onClick={handleSaveApp}
-                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold transition-colors"
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold transition-colors cursor-pointer"
               >
                 <Save className="w-4 h-4 text-indigo-600" />
                 <span>Save Application</span>
-              </button>
-
-              <button
-                id="btn-schedule-calendar-event"
-                onClick={() => onOpenCalendarSchedule(activeGeneratedApp)}
-                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold transition-colors shadow-sm"
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Schedule Interview / Follow-up</span>
               </button>
             </div>
           </div>
@@ -543,10 +524,6 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               resumeData={activeGeneratedApp.tailoredResume}
               jobTitle={activeGeneratedApp.jobTitle}
               companyName={activeGeneratedApp.companyName}
-              isPro={isPro}
-              freeDownloadsCount={freeDownloadsCount}
-              onIncrementDownloadCount={onIncrementDownloadCount}
-              onRequirePro={onRequirePro}
             />
           )}
 
@@ -560,8 +537,6 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               onUpdateText={(newText) => {
                 activeGeneratedApp.coverLetter = newText;
               }}
-              isPro={isPro}
-              onRequirePro={onRequirePro}
             />
           )}
 
@@ -575,8 +550,6 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               onUpdateText={(newText) => {
                 activeGeneratedApp.personalStatement = newText;
               }}
-              isPro={isPro}
-              onRequirePro={onRequirePro}
             />
           )}
 
@@ -585,8 +558,6 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               atsAnalysis={activeGeneratedApp.atsAnalysis}
               jobTitle={activeGeneratedApp.jobTitle}
               companyName={activeGeneratedApp.companyName}
-              isPro={isPro}
-              onRequirePro={onRequirePro}
               onAddKeywordToResume={(kw) => {
                 if (!activeGeneratedApp.tailoredResume.skills.technical.includes(kw)) {
                   activeGeneratedApp.tailoredResume.skills.technical.push(kw);

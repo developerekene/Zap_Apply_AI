@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download, FileText, Sparkles, CheckCircle2, Award, Lock, Crown, ArrowRight, Zap } from 'lucide-react';
+import { Copy, Check, Download, FileText, Sparkles, CheckCircle2, Award } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { ContactInfo } from '../types';
 
@@ -10,8 +10,6 @@ interface PersonalStatementViewProps {
   candidateName?: string;
   contact?: ContactInfo;
   onUpdateText: (newText: string) => void;
-  isPro?: boolean;
-  onRequirePro?: () => void;
 }
 
 export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
@@ -20,9 +18,7 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
   jobTitle = 'Target Role',
   candidateName = 'Candidate',
   contact,
-  onUpdateText,
-  isPro = false,
-  onRequirePro
+  onUpdateText
 }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -70,20 +66,12 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
   const finalFormattedStatement = getFormattedStatementText();
 
   const handleCopy = () => {
-    if (!isPro) {
-      if (onRequirePro) onRequirePro();
-      return;
-    }
     navigator.clipboard.writeText(finalFormattedStatement);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadPdf = () => {
-    if (!isPro) {
-      if (onRequirePro) onRequirePro();
-      return;
-    }
     const doc = new jsPDF('p', 'mm', 'a4');
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(10);
@@ -150,7 +138,7 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
       return (
         <div key={idx} className={`p-3 rounded-xl border ${badgeStyle} my-2 text-xs leading-relaxed`}>
           <div className="font-extrabold uppercase text-[10px] tracking-wider mb-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
+            <Sparkles className="w-3 text-indigo-600" />
             {badgeLabel}
           </div>
           <div className="text-slate-800">{trimmed}</div>
@@ -189,14 +177,14 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
         <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors"
+            className="px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
           >
             {isEditing ? 'Done Editing' : 'Edit Text'}
           </button>
 
           <button
             onClick={handleCopy}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
             title="Copy Statement Text"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
@@ -205,7 +193,7 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
 
           <button
             onClick={handleDownloadPdf}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-xs"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download PDF</span>
@@ -214,9 +202,9 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="relative bg-slate-50 border border-slate-200 text-slate-900 rounded-xl p-6 sm:p-8 font-sans text-xs shadow-xs min-h-[350px] overflow-hidden">
+      <div className="relative bg-slate-50 border border-slate-200 text-slate-900 rounded-xl p-6 sm:p-8 font-sans text-xs shadow-xs min-h-[350px]">
         {/* Rendered content */}
-        <div className={`space-y-1 ${!isPro ? 'select-none blur-xs opacity-30 pointer-events-none' : ''}`}>
+        <div className="space-y-1">
           {isEditing ? (
             <textarea
               value={finalFormattedStatement}
@@ -227,36 +215,6 @@ export const PersonalStatementView: React.FC<PersonalStatementViewProps> = ({
             paragraphs.map((p, idx) => renderFormattedParagraph(p, idx))
           )}
         </div>
-
-        {/* Pro Lock Overlay */}
-        {!isPro && (
-          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center text-white z-20">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-xl mb-3">
-              <Crown className="w-6 h-6 fill-white text-white" />
-            </div>
-
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-400 text-slate-950 mb-2">
-              EXECUTIVE PRO FEATURE
-            </span>
-
-            <h3 className="text-xl font-black text-white max-w-md">
-              STAR Personal Statement Engine
-            </h3>
-
-            <p className="text-xs text-slate-200 max-w-md mt-2 mb-5 leading-relaxed">
-              Mapped to essential advert criteria with STAR (Situation, Task, Action, Result) methodology. High-value candidates save hours structuring evidence responses.
-            </p>
-
-            <button
-              onClick={onRequirePro}
-              className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-xl shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 flex items-center space-x-2"
-            >
-              <Zap className="w-4 h-4 fill-white text-white" />
-              <span>Unlock STAR Personal Statement — Upgrade to Pro</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -133,7 +133,8 @@ Respond strictly with valid JSON only. Do not include markdown code blocks (\`\`
     });
 
     const outputText = response.text || '{}';
-    const parsedData = JSON.parse(outputText);
+    const cleanJson = outputText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsedData = JSON.parse(cleanJson);
     return res.json({ success: true, data: parsedData });
   } catch (error: any) {
     console.error('Error in parse-resume:', error);
@@ -291,120 +292,14 @@ Respond STRICTLY with valid JSON matching this schema:
     });
 
     const outputText = response.text || '{}';
-    const resultJson = JSON.parse(outputText);
+    const cleanJson = outputText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const resultJson = JSON.parse(cleanJson);
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
     console.error('Error in tailor-application:', error);
     return res.status(500).json({
       error: error.message || 'Failed to generate tailored application.'
     });
-  }
-});
-
-// --------------------------------------------------------
-// API ROUTE 3: Google Calendar Proxy for Interviews & Follow-ups
-// --------------------------------------------------------
-app.post('/api/calendar/create-event', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid Authorization header. Please connect Google Calendar.' });
-    }
-
-    const token = authHeader.substring(7);
-    const { title, date, notes, companyName, type } = req.body;
-
-    if (!title || !date) {
-      return res.status(400).json({ error: 'Title and date are required for Google Calendar event.' });
-    }
-
-    const startIso = new Date(date).toISOString();
-    // Default 45 minutes duration
-    const endDate = new Date(new Date(date).getTime() + 45 * 60 * 1000);
-    const endIso = endDate.toISOString();
-
-    const eventPayload = {
-      summary: title,
-      description: `${type || 'Event'} for ${companyName || 'Application'}.\n\nNotes:\n${notes || 'No additional notes provided.'}\n\nScheduled via ZAP Apply.`,
-      start: {
-        dateTime: startIso,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      },
-      end: {
-        dateTime: endIso,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      },
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 60 },
-          { method: 'popup', minutes: 1440 } // 24 hours prior
-        ]
-      }
-    };
-
-    if (token.startsWith('zap_') || token.startsWith('mock_')) {
-      // Local connected session token
-      return res.json({
-        success: true,
-        eventId: `evt-${Date.now()}`,
-        htmlLink: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}`
-      });
-    }
-
-    const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(eventPayload)
-    });
-
-    const calendarData = await calendarResponse.json();
-
-    if (!calendarResponse.ok) {
-      console.warn('Google Calendar API Error, falling back to app event tracker:', calendarData);
-      return res.json({
-        success: true,
-        eventId: `evt-${Date.now()}`,
-        htmlLink: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}`
-      });
-    }
-
-    return res.json({
-      success: true,
-      eventId: calendarData.id,
-      htmlLink: calendarData.htmlLink
-    });
-  } catch (error: any) {
-    console.error('Error in create-event:', error);
-    return res.status(500).json({ error: error.message || 'Server error creating Google Calendar event.' });
-  }
-});
-
-// GET user info from Google OAuth token
-app.get('/api/calendar/userinfo', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing token' });
-    }
-    const token = authHeader.substring(7);
-    const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const userData = await userRes.json();
-    if (!userRes.ok) {
-      return res.status(userRes.status).json({ error: userData.error_description || 'Failed userinfo' });
-    }
-    return res.json({
-      email: userData.email,
-      name: userData.name,
-      picture: userData.picture
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
   }
 });
 

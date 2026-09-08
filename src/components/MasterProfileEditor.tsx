@@ -114,33 +114,35 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
         'Are you sure you want to completely clear your Master Profile and remove your attached CV? This will delete all resume sections, contact info, experience, skills, education, and remove the attached CV file.'
       )
     ) {
+      const cleanEmptyProfile: ResumeData = {
+        summary: '',
+        strengths: [],
+        contact: {
+          fullName: '',
+          email: '',
+          phone: '',
+          location: '',
+          address: '',
+          postCode: '',
+          country: '',
+          linkedin: '',
+          github: '',
+          portfolio: ''
+        },
+        experience: [],
+        skills: { technical: [], soft: [], toolsAndFrameworks: [], certifications: [] },
+        education: [],
+        projects: [],
+        attachedCvFileName: undefined,
+        attachedCvDate: undefined,
+        attachedCvSize: undefined
+      };
+
+      onUpdateMasterProfile(cleanEmptyProfile);
       if (onResetProfile) {
         onResetProfile();
-      } else {
-        onUpdateMasterProfile({
-          summary: '',
-          targetRoles: [],
-          strengths: [],
-          contact: {
-            fullName: '',
-            email: '',
-            phone: '',
-            location: '',
-            address: '',
-            postCode: '',
-            country: '',
-            linkedin: '',
-            portfolio: ''
-          },
-          experience: [],
-          skills: { technical: [], soft: [], toolsAndFrameworks: [], certifications: [] },
-          education: [],
-          projects: [],
-          attachedCvFileName: undefined,
-          attachedCvDate: undefined,
-          attachedCvSize: undefined
-        });
       }
+      setPasteText('');
       setClearedAlert(true);
     }
   };

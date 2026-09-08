@@ -3,54 +3,26 @@ import {
   Zap,
   FileText,
   Target,
-  Calendar,
-  CheckCircle2,
-  CalendarPlus,
-  Sparkles,
-  ChevronDown,
   Layers,
-  Crown,
-  Lock,
+  ChevronDown,
   Menu,
   X,
-  UserCheck,
-  Check,
-  Unlink
+  ExternalLink,
+  ArrowUpRight
 } from 'lucide-react';
-import { GoogleUserInfo } from '../types';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  googleUser: GoogleUserInfo | null;
-  googleToken: string | null;
-  onConnectGoogle: () => void;
-  onDisconnectGoogle?: () => void;
-  isConnectingGoogle: boolean;
   totalApplicationsCount: number;
-  upcomingInterviewsCount: number;
-  isPro?: boolean;
-  isAdmin?: boolean;
-  onOpenUpgradeModal?: () => void;
-  profileEmail?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  googleUser,
-  googleToken,
-  onConnectGoogle,
-  onDisconnectGoogle,
-  isConnectingGoogle,
-  totalApplicationsCount,
-  upcomingInterviewsCount,
-  isPro = false,
-  isAdmin = false,
-  onOpenUpgradeModal,
-  profileEmail = ''
+  totalApplicationsCount
 }) => {
-  const [activeDropdown, setActiveDropdown] = useState<'resume' | 'apps' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'resume' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +38,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const isResumeActive = activeTab === 'profile' || activeTab === 'ats';
-  const isAppsActive = activeTab === 'tracker';
 
   const handleSelectTab = (tabId: string) => {
     setActiveTab(tabId);
@@ -80,32 +51,28 @@ export const Navbar: React.FC<NavbarProps> = ({
       label: 'Tailor Studio',
       shortLabel: 'Tailor',
       description: '1-Click ATS Resume & Cover Letter Generator',
-      icon: Zap,
-      badge: null
+      icon: Zap
     },
     {
       id: 'profile',
       label: 'Master Profile',
       shortLabel: 'Profile',
       description: 'Resume Experience, Skills & Strength Vault',
-      icon: FileText,
-      badge: null
+      icon: FileText
     },
     {
       id: 'ats',
       label: 'ATS Keyword Match',
       shortLabel: 'ATS Match',
       description: 'Job Description Match & Gap Analyzer',
-      icon: Target,
-      badge: null
+      icon: Target
     },
     {
       id: 'tracker',
-      label: 'Application Hub',
+      label: 'Application Tracker',
       shortLabel: 'Tracker',
-      description: 'Interview Schedule & Status Management',
-      icon: Calendar,
-      badge: upcomingInterviewsCount > 0 ? upcomingInterviewsCount : null
+      description: 'Job Application Pipeline & Status Management',
+      icon: Layers
     }
   ];
 
@@ -143,13 +110,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Grouped Desktop Navigation Dropdowns */}
+          {/* Grouped Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             {/* Direct Primary Action: Tailor Studio */}
             <button
               id="nav-tab-generator"
               onClick={() => handleSelectTab('generator')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 activeTab === 'generator'
                   ? 'bg-slate-900 text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -164,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="nav-dropdown-resume"
                 onClick={() => setActiveDropdown(activeDropdown === 'resume' ? null : 'resume')}
-                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                   isResumeActive
                     ? 'bg-slate-900 text-white font-semibold shadow-xs'
                     : activeDropdown === 'resume'
@@ -190,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     id="nav-item-profile"
                     onClick={() => handleSelectTab('profile')}
-                    className={`w-full flex items-start space-x-3 px-3 py-2.5 hover:bg-slate-50 text-left transition-colors ${
+                    className={`w-full flex items-start space-x-3 px-3 py-2.5 hover:bg-slate-50 text-left transition-colors cursor-pointer ${
                       activeTab === 'profile' ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : ''
                     }`}
                   >
@@ -206,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     id="nav-item-ats"
                     onClick={() => handleSelectTab('ats')}
-                    className={`w-full flex items-start space-x-3 px-3 py-2.5 hover:bg-slate-50 text-left transition-colors ${
+                    className={`w-full flex items-start space-x-3 px-3 py-2.5 hover:bg-slate-50 text-left transition-colors cursor-pointer ${
                       activeTab === 'ats' ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : ''
                     }`}
                   >
@@ -222,128 +189,40 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Dropdown 2: Applications & Interview Tracker */}
-            <div className="relative">
-              <button
-                id="nav-dropdown-apps"
-                onClick={() => setActiveDropdown(activeDropdown === 'apps' ? null : 'apps')}
-                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isAppsActive
-                    ? 'bg-slate-900 text-white font-semibold shadow-xs'
-                    : activeDropdown === 'apps'
-                    ? 'bg-slate-100 text-slate-900 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Calendar className={`w-4 h-4 ${isAppsActive ? 'text-white' : 'text-slate-500'}`} />
-                <span>Tracker & Hub</span>
-                {upcomingInterviewsCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full text-xs bg-indigo-600 text-white font-bold">
-                    {upcomingInterviewsCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    activeDropdown === 'apps' ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {activeDropdown === 'apps' && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
-                    Job Application Management
-                  </div>
-
-                  <button
-                    id="nav-item-tracker"
-                    onClick={() => handleSelectTab('tracker')}
-                    className={`w-full flex items-start space-x-3 px-3 py-2.5 hover:bg-slate-50 text-left transition-colors ${
-                      activeTab === 'tracker' ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : ''
-                    }`}
-                  >
-                    <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 mt-0.5">
-                      <Calendar className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-900">Application Tracker</span>
-                        {totalApplicationsCount > 0 && (
-                          <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-bold">
-                            {totalApplicationsCount}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500">Track applications, interviews & follow-ups</div>
-                    </div>
-                  </button>
-                </div>
+            {/* Direct Tracker Link */}
+            <button
+              id="nav-tab-tracker"
+              onClick={() => handleSelectTab('tracker')}
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                activeTab === 'tracker'
+                  ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Layers className={`w-4 h-4 ${activeTab === 'tracker' ? 'text-white' : 'text-slate-500'}`} />
+              <span>Application Tracker</span>
+              {totalApplicationsCount > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                  activeTab === 'tracker' ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {totalApplicationsCount}
+                </span>
               )}
-            </div>
+            </button>
           </nav>
 
-          {/* Pro Status / Upgrade & Google Calendar Auth */}
+          {/* Right Action: Join System One (Disabled for now) */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Pro Badge or Upgrade CTA */}
-            {isAdmin ? (
-              <div
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white font-extrabold text-xs shadow-md"
-                title={`Master Admin Access: ${profileEmail || 'seniordevekene@gmail.com'} (Lifetime Free Pro Unlocked)`}
-              >
-                <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-100" />
-                <span className="hidden sm:inline">ADMIN VIP</span>
-                <span className="sm:hidden">ADMIN</span>
-              </div>
-            ) : isPro ? (
-              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-extrabold text-xs shadow-xs">
-                <Crown className="w-3.5 h-3.5 fill-white text-white" />
-                <span className="hidden sm:inline">PRO ACTIVE</span>
-                <span className="sm:hidden">PRO</span>
-              </div>
-            ) : (
-              <button
-                onClick={onOpenUpgradeModal}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 transition-all transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 fill-white text-white" />
-                <span className="hidden sm:inline">Upgrade Pro</span>
-                <span className="sm:hidden">Upgrade</span>
-              </button>
-            )}
-
-            {googleToken ? (
-              <div
-                className="flex items-center space-x-1.5 bg-emerald-50 border border-emerald-200 pl-2.5 pr-1.5 py-1 rounded-xl text-xs font-medium text-emerald-800"
-                title={`Google Calendar connected with ${profileEmail || 'your profile'}`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="hidden lg:inline font-semibold">Calendar: {profileEmail || 'Active'}</span>
-                <span className="lg:hidden text-[11px] sm:text-xs font-semibold">Linked</span>
-                {onDisconnectGoogle && (
-                  <button
-                    type="button"
-                    id="btn-unlink-google-calendar"
-                    onClick={onDisconnectGoogle}
-                    className="ml-1 px-2 py-0.5 text-[11px] font-bold text-rose-600 hover:text-white hover:bg-rose-600 rounded-lg transition-colors cursor-pointer"
-                    title="Unlink Google Calendar from this app"
-                  >
-                    Unlink
-                  </button>
-                )}
-              </div>
-            ) : (
-              <button
-                id="btn-connect-google-calendar"
-                onClick={onConnectGoogle}
-                disabled={isConnectingGoogle}
-                className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs disabled:opacity-75 cursor-pointer"
-                title={`Connect Google Calendar using ${profileEmail || 'your email'}`}
-              >
-                <CalendarPlus className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="hidden sm:inline">{isConnectingGoogle ? 'Connecting...' : 'Connect Calendar'}</span>
-                <span className="sm:hidden text-[11px]">{isConnectingGoogle ? 'Connecting...' : 'Connect'}</span>
-              </button>
-            )}
+            <button
+              type="button"
+              id="btn-join-system-one"
+              disabled
+              className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-slate-200 text-slate-400 font-extrabold text-xs sm:text-sm border border-slate-300 cursor-not-allowed opacity-75 shadow-none select-none"
+              title="Join System One (Coming Soon)"
+            >
+              <span>Join System One</span>
+              <span className="text-[10px] font-bold bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded-md">Soon</span>
+            </button>
           </div>
         </div>
 
@@ -375,48 +254,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="text-xs text-slate-500">{link.description}</div>
                     </div>
                   </div>
-                  {link.badge && (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-black bg-indigo-600 text-white">
-                      {link.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
 
-            {/* Calendar Connection status row in mobile drawer */}
-            <div className="pt-2 border-t border-slate-100 px-3 flex items-center justify-between text-xs text-slate-500">
-              <span>Calendar Sync:</span>
-              {googleToken ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" /> {profileEmail || 'Connected'}
-                  </span>
-                  {onDisconnectGoogle && (
-                    <button
-                      type="button"
-                      id="btn-unlink-google-calendar-mobile"
-                      onClick={onDisconnectGoogle}
-                      className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
-                    >
-                      Unlink
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={onConnectGoogle}
-                  disabled={isConnectingGoogle}
-                  className="text-indigo-600 font-bold hover:underline"
-                >
-                  {isConnectingGoogle ? 'Connecting...' : 'Connect Now'}
-                </button>
-              )}
+            {/* Mobile Join System One (Disabled) */}
+            <div className="pt-2 px-3">
+              <button
+                type="button"
+                disabled
+                className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-slate-200 text-slate-400 font-bold text-xs border border-slate-300 cursor-not-allowed opacity-75"
+              >
+                <span>Join System One (Coming Soon)</span>
+              </button>
             </div>
           </div>
         )}
 
-        {/* Mobile Persistent Bottom Tab Bar with ALL 4 Navigation Links */}
+        {/* Mobile Persistent Bottom Tab Bar with ALL Navigation Links */}
         <div className="flex md:hidden border-t border-slate-200 py-1.5 items-center justify-around bg-white">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -433,11 +288,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Icon className="w-4 h-4" />
                 </div>
                 <span className="text-[10px] tracking-tight mt-0.5 leading-none">{link.shortLabel}</span>
-                {link.badge && (
-                  <span className="absolute top-0 right-3.5 w-4 h-4 flex items-center justify-center rounded-full text-[9px] bg-indigo-600 text-white font-bold">
-                    {link.badge}
-                  </span>
-                )}
               </button>
             );
           })}

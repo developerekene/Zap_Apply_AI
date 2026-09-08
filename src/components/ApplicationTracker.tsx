@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Search, Filter, Plus, FileText, Mail, Target, Trash2, Edit2, ExternalLink, CheckCircle2, Clock, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, FileText, Target, Trash2, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { TailoredApplication, ApplicationStatus } from '../types';
 
 interface ApplicationTrackerProps {
@@ -8,10 +8,6 @@ interface ApplicationTrackerProps {
   onUpdateNotes: (id: string, notes: string) => void;
   onDeleteApplication: (id: string) => void;
   onSelectApplicationForView: (app: TailoredApplication) => void;
-  onOpenCalendarModal: (app: TailoredApplication) => void;
-  googleToken: string | null;
-  isPro?: boolean;
-  onRequirePro?: () => void;
 }
 
 export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
@@ -19,11 +15,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
   onUpdateStatus,
   onUpdateNotes,
   onDeleteApplication,
-  onSelectApplicationForView,
-  onOpenCalendarModal,
-  googleToken,
-  isPro = false,
-  onRequirePro
+  onSelectApplicationForView
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -65,35 +57,6 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Free Tier Limit Banner */}
-      {!isPro && (
-        <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-white/10 text-amber-400">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-sm text-white">Application Tracker Limit</span>
-                <span className="text-[10px] font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
-                  {applications.length} / 5 Free Cards
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Free tier allows up to 5 tracking cards. Upgrade to Pro for unlimited application tracking.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onRequirePro}
-            className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-all shrink-0 shadow-sm"
-          >
-            Upgrade to Pro
-          </button>
-        </div>
-      )}
-
       {/* Stats Pipeline Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
@@ -142,7 +105,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                 statusFilter === st ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -196,7 +159,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
                     <select
                       value={app.status}
                       onChange={(e) => onUpdateStatus(app.id, e.target.value as ApplicationStatus)}
-                      className="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500/20"
+                      className="bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                     >
                       {statuses.map(s => (
                         <option key={s} value={s}>{s}</option>
@@ -205,7 +168,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
                     <button
                       onClick={() => onDeleteApplication(app.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition-colors cursor-pointer"
                       title="Delete Application"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -213,34 +176,19 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Calendar & Notes Quick Action Bar */}
+                {/* Actions Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onOpenCalendarModal(app)}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 font-semibold transition-colors"
-                    >
-                      <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Google Calendar Sync</span>
-                      {app.events?.length > 0 && (
-                        <span className="ml-1 bg-indigo-600 text-white px-1.5 rounded-full font-bold">
-                          {app.events.length}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => onSelectApplicationForView(app)}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium transition-colors border border-slate-300"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>View Tailored Application</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => onSelectApplicationForView(app)}
+                    className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors cursor-pointer shadow-xs"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>View Tailored Application</span>
+                  </button>
 
                   <button
                     onClick={() => setExpandedAppId(isExpanded ? null : app.id)}
-                    className="flex items-center space-x-1 text-slate-500 hover:text-slate-900 font-semibold"
+                    className="flex items-center space-x-1 text-slate-500 hover:text-slate-900 font-semibold cursor-pointer"
                   >
                     <span>{isExpanded ? 'Hide Details' : 'Expand Notes & Details'}</span>
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -253,27 +201,13 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
                     <div>
                       <label className="block text-slate-600 font-semibold mb-1">Application Notes / Interview Preparation:</label>
                       <textarea
-                        rows={2}
+                        rows={3}
                         value={app.notes || ''}
                         onChange={(e) => onUpdateNotes(app.id, e.target.value)}
-                        placeholder="Add notes, recruiter contacts, or interview round details..."
+                        placeholder="Add notes, recruiter contacts, salary details, or interview round prep..."
                         className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       />
                     </div>
-
-                    {app.events?.length > 0 && (
-                      <div>
-                        <span className="text-slate-600 font-semibold block mb-1">Scheduled Calendar Events:</span>
-                        <div className="space-y-1.5">
-                          {app.events.map((evt) => (
-                            <div key={evt.id} className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center text-slate-800">
-                              <span>📅 <strong>{evt.title}</strong> — {new Date(evt.date).toLocaleString()}</span>
-                              <span className="text-emerald-600 font-bold">Synced to Google</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

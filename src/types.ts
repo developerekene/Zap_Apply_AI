@@ -78,16 +78,6 @@ export interface AtsAnalysis {
 
 export type ApplicationStatus = 'Saved' | 'Applied' | 'Interview Scheduled' | 'Offer Received' | 'Rejected';
 
-export interface CalendarEvent {
-  id: string;
-  calendarEventId?: string;
-  title: string;
-  date: string;
-  type: 'Interview' | 'Follow-up' | 'Assessment';
-  notes?: string;
-  syncedToGoogle?: boolean;
-}
-
 export interface TailoredApplication {
   id: string;
   jobTitle: string;
@@ -102,13 +92,6 @@ export interface TailoredApplication {
   coverLetter: string;
   personalStatement?: string;
   atsAnalysis: AtsAnalysis;
-  events: CalendarEvent[];
   salaryExpectation?: string;
   applicationUrl?: string;
-}
-
-export interface GoogleUserInfo {
-  email: string;
-  name: string;
-  picture?: string;
 }

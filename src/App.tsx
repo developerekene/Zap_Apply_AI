@@ -1,29 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ResumeData, TailoredApplication, ApplicationStatus } from './types';
-import { initialMasterProfile, emptyMasterProfile, sampleApplications, checkIsAdmin } from './mockData';
+import { emptyMasterProfile } from './mockData';
 import { Navbar } from './components/Navbar';
 import { OneClickGenerator } from './components/OneClickGenerator';
 import { MasterProfileEditor } from './components/MasterProfileEditor';
 import { AtsOptimizerView } from './components/AtsOptimizerView';
 import { ApplicationTracker } from './components/ApplicationTracker';
-import { GoogleCalendarSyncModal } from './components/GoogleCalendarSyncModal';
-import { ProUpgradeModal } from './components/ProUpgradeModal';
-import { requestGoogleCalendarToken, disconnectGoogleAuth } from './lib/googleAuth';
 
 export default function App() {
-  // Pro Subscription State
-  const [isPro, setIsPro] = useState<boolean>(() => {
-    return localStorage.getItem('zap_is_pro') === 'true';
-  });
-
-  // Free Downloads Counter
-  const [freeDownloadsCount, setFreeDownloadsCount] = useState<number>(() => {
-    return Number(localStorage.getItem('zap_free_downloads') || '0');
-  });
-
-  // Pro Modal State
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-
   // Master Profile State with LocalStorage persistence
   const [masterProfile, setMasterProfile] = useState<ResumeData>(() => {
     const saved = localStorage.getItem('zap_master_profile_clean');
@@ -41,6 +25,9 @@ export default function App() {
     try {
       localStorage.removeItem('zap_master_profile');
       localStorage.removeItem('zap_master_profile_v2');
+      localStorage.removeItem('zap_is_pro');
+      localStorage.removeItem('zap_free_downloads');
+      localStorage.removeItem('zap_google_token');
     } catch (e) {}
     return emptyMasterProfile;
   });
@@ -65,29 +52,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('generator');
   const [activeGeneratedApp, setActiveGeneratedApp] = useState<TailoredApplication | null>(null);
 
-  // Google OAuth Calendar State
-  const [googleToken, setGoogleToken] = useState<string | null>(() => {
-    return localStorage.getItem('zap_google_token') || null;
-  });
-  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
-
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
 
-  // Calendar Modal State
-  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [selectedAppForCalendar, setSelectedAppForCalendar] = useState<TailoredApplication | null>(null);
-
   // Sync state to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('zap_is_pro', String(isPro));
-  }, [isPro]);
-
-  useEffect(() => {
-    localStorage.setItem('zap_free_downloads', String(freeDownloadsCount));
-  }, [freeDownloadsCount]);
-
   useEffect(() => {
     localStorage.setItem('zap_master_profile_clean', JSON.stringify(masterProfile));
   }, [masterProfile]);
@@ -95,59 +64,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('zap_applications', JSON.stringify(applications));
   }, [applications]);
-
-  useEffect(() => {
-    if (googleToken) {
-      localStorage.setItem('zap_google_token', googleToken);
-    } else {
-      localStorage.removeItem('zap_google_token');
-    }
-  }, [googleToken]);
-
-  const handleOpenUpgradeModal = () => {
-    setIsUpgradeModalOpen(true);
-  };
-
-  const handlePaymentSuccess = (transactionRef: string, plan: 'weekly' | 'monthly' | 'quarterly', email: string) => {
-    setIsPro(true);
-    setIsUpgradeModalOpen(false);
-    alert(`🎉 Payment Successful! Welcome to Zap.AI Pro (${plan.toUpperCase()} Plan). Transaction Ref: ${transactionRef}`);
-  };
-
-  const handleIncrementDownloadCount = () => {
-    setFreeDownloadsCount(prev => prev + 1);
-  };
-
-  // Connect Google Calendar via OAuth using Profile Email
-  const handleConnectGoogle = async () => {
-    if (isConnectingGoogle) return;
-    setIsConnectingGoogle(true);
-    const candidateEmail = masterProfile?.contact?.email || (masterProfile as any)?.contactInfo?.email || 'seniordevekene@gmail.com';
-    try {
-      const token = await requestGoogleCalendarToken(candidateEmail);
-      if (token) {
-        setGoogleToken(token);
-      }
-    } catch (err: any) {
-      console.warn('Google Calendar authorization was not completed or was cancelled:', err?.message || err);
-      // If user went back or cancelled, do not set token and restore clean initial state
-    } finally {
-      setIsConnectingGoogle(false);
-    }
-  };
-
-  // Disconnect / Unlink Google Calendar
-  const handleDisconnectGoogle = async () => {
-    if (confirm('Are you sure you want to unlink Google Calendar from this application? You can reconnect at any time.')) {
-      setGoogleToken(null);
-      localStorage.removeItem('zap_google_token');
-      try {
-        await disconnectGoogleAuth();
-      } catch (e) {
-        // Ignore disconnect errors
-      }
-    }
-  };
 
   // 1-Click Tailor Application AI Generator
   const handleGenerateTailoredApp = async (payload: {
@@ -196,8 +112,7 @@ export default function App() {
         tailoredResume,
         coverLetter,
         personalStatement,
-        atsAnalysis,
-        events: []
+        atsAnalysis
       };
 
       setActiveGeneratedApp(newApp);
@@ -254,78 +169,6 @@ export default function App() {
     }
   };
 
-  // Google Calendar Event Creator
-  const handleAddCalendarEvent = async (
-    appId: string,
-    eventData: {
-      title: string;
-      date: string;
-      type: 'Interview' | 'Follow-up' | 'Assessment';
-      notes?: string;
-    }
-  ) => {
-    if (!googleToken) {
-      alert('Please connect Google Calendar first.');
-      return;
-    }
-
-    const app = applications.find(a => a.id === appId);
-
-    const res = await fetch('/api/calendar/create-event', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${googleToken}`
-      },
-      body: JSON.stringify({
-        title: eventData.title,
-        date: eventData.date,
-        notes: eventData.notes,
-        companyName: app?.companyName || 'Job Application',
-        type: eventData.type
-      })
-    });
-
-    const resJson = await res.json();
-    if (!res.ok || !resJson.success) {
-      throw new Error(resJson.error || 'Failed to add event to Google Calendar.');
-    }
-
-    const newCalendarEvent = {
-      id: `evt-${Date.now()}`,
-      calendarEventId: resJson.eventId,
-      title: eventData.title,
-      date: eventData.date,
-      type: eventData.type,
-      notes: eventData.notes,
-      syncedToGoogle: true
-    };
-
-    // Update state
-    setApplications(prev =>
-      prev.map(a => {
-        if (a.id === appId) {
-          const updatedEvents = [...(a.events || []), newCalendarEvent];
-          // If scheduling an interview, auto upgrade status to "Interview Scheduled"
-          const updatedStatus = eventData.type === 'Interview' ? 'Interview Scheduled' : a.status;
-          return { ...a, events: updatedEvents, status: updatedStatus };
-        }
-        return a;
-      })
-    );
-
-    if (activeGeneratedApp && activeGeneratedApp.id === appId) {
-      setActiveGeneratedApp({
-        ...activeGeneratedApp,
-        events: [...(activeGeneratedApp.events || []), newCalendarEvent],
-        status: eventData.type === 'Interview' ? 'Interview Scheduled' : activeGeneratedApp.status
-      });
-    }
-
-    alert(`Successfully synced event "${eventData.title}" to Google Calendar!`);
-    setCalendarModalOpen(false);
-  };
-
   // Application tracker handlers
   const handleUpdateStatus = (id: string, newStatus: ApplicationStatus) => {
     setApplications(prev =>
@@ -360,32 +203,12 @@ export default function App() {
     setActiveTab('generator');
   };
 
-  const handleOpenCalendarModal = (app: TailoredApplication) => {
-    setSelectedAppForCalendar(app);
-    setCalendarModalOpen(true);
-  };
-
-  const upcomingInterviewsCount = applications.filter(a => a.status === 'Interview Scheduled').length;
-  const candidateEmail = masterProfile?.contact?.email || (masterProfile as any)?.contactInfo?.email || '';
-  const isAdmin = checkIsAdmin(candidateEmail);
-  const isEffectivePro = isAdmin || isPro;
-
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        googleUser={null}
-        googleToken={googleToken}
-        onConnectGoogle={handleConnectGoogle}
-        onDisconnectGoogle={handleDisconnectGoogle}
-        isConnectingGoogle={isConnectingGoogle}
         totalApplicationsCount={applications.length}
-        upcomingInterviewsCount={upcomingInterviewsCount}
-        isPro={isEffectivePro}
-        isAdmin={isAdmin}
-        onOpenUpgradeModal={handleOpenUpgradeModal}
-        profileEmail={candidateEmail}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -396,19 +219,9 @@ export default function App() {
             isGenerating={isGenerating}
             activeGeneratedApp={activeGeneratedApp}
             onSaveToTracker={(app) => {
-              if (!isEffectivePro && applications.length >= 5 && !applications.some(a => a.id === app.id)) {
-                handleOpenUpgradeModal();
-                alert('Free tier limit: You can track up to 5 job application cards. Upgrade to Pro for unlimited application tracking.');
-                return;
-              }
               setApplications(prev => [app, ...prev.filter(a => a.id !== app.id)]);
             }}
-            onOpenCalendarSchedule={handleOpenCalendarModal}
             onGoToProfile={() => setActiveTab('profile')}
-            isPro={isEffectivePro}
-            freeDownloadsCount={isAdmin ? 0 : freeDownloadsCount}
-            onIncrementDownloadCount={handleIncrementDownloadCount}
-            onRequirePro={handleOpenUpgradeModal}
           />
         )}
 
@@ -427,8 +240,6 @@ export default function App() {
             atsAnalysis={activeGeneratedApp.atsAnalysis}
             jobTitle={activeGeneratedApp.jobTitle}
             companyName={activeGeneratedApp.companyName}
-            isPro={isEffectivePro}
-            onRequirePro={handleOpenUpgradeModal}
             onAddKeywordToResume={(kw) => {
               if (!masterProfile.skills.technical.includes(kw)) {
                 setMasterProfile({
@@ -460,35 +271,9 @@ export default function App() {
             onUpdateNotes={handleUpdateNotes}
             onDeleteApplication={handleDeleteApplication}
             onSelectApplicationForView={handleSelectApplicationForView}
-            onOpenCalendarModal={handleOpenCalendarModal}
-            googleToken={googleToken}
-            isPro={isEffectivePro}
-            onRequirePro={handleOpenUpgradeModal}
           />
         )}
       </main>
-
-      {/* Google Calendar Event Modal */}
-      <GoogleCalendarSyncModal
-        isOpen={calendarModalOpen}
-        onClose={() => setCalendarModalOpen(false)}
-        application={selectedAppForCalendar}
-        googleToken={googleToken}
-        onConnectGoogle={handleConnectGoogle}
-        onDisconnectGoogle={handleDisconnectGoogle}
-        onAddCalendarEvent={handleAddCalendarEvent}
-        isPro={isEffectivePro}
-        onRequirePro={handleOpenUpgradeModal}
-        profileEmail={candidateEmail}
-      />
-
-      {/* Pro Upgrade & Paystack Checkout Modal */}
-      <ProUpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        onPaymentSuccess={handlePaymentSuccess}
-        defaultEmail={candidateEmail}
-      />
     </div>
   );
 }
