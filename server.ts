@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Helper to check Gemini API Key safely
 function getGeminiClient() {
@@ -25,6 +25,153 @@ function getGeminiClient() {
       },
     },
   });
+}
+
+// Resilient helper to call Gemini with automatic fallback between candidate models
+async function generateWithGeminiFallback(
+  ai: GoogleGenAI,
+  requestParams: {
+    contents: any;
+    config?: any;
+  }
+) {
+  // Ordered by current health, speed, and availability
+  const models = [
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest',
+    'gemini-3.8-flash',
+    'gemini-3.6-flash'
+  ];
+
+  let lastError: any = null;
+  for (const model of models) {
+    try {
+      console.log(`[Gemini] Attempting call with model: ${model}...`);
+      const response = await ai.models.generateContent({
+        ...requestParams,
+        model
+      });
+      console.log(`[Gemini] Model ${model} succeeded.`);
+      return response;
+    } catch (err: any) {
+      console.warn(`[Gemini] Model ${model} failed (${err?.message || err}). Trying fallback model...`);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All Gemini candidate models failed to generate content.');
+}
+
+// Clean and parse JSON strictly from AI output
+function extractJsonFromResponse(rawText: string): any {
+  if (!rawText) return {};
+  const cleaned = rawText
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (initialErr) {
+    // If there is preamble or postamble text, extract outermost JSON object { ... }
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      const jsonSubstr = cleaned.substring(start, end + 1);
+      return JSON.parse(jsonSubstr);
+    }
+    throw initialErr;
+  }
+}
+
+// Normalize extracted CV data to ensure all 5 core sections are completely populated
+function normalizeParsedResume(data: any) {
+  if (!data || typeof data !== 'object') {
+    data = {};
+  }
+
+  const contact = data.contact || {};
+  const normalizedContact = {
+    fullName: typeof contact.fullName === 'string' ? contact.fullName.trim() : '',
+    email: typeof contact.email === 'string' ? contact.email.trim() : '',
+    phone: typeof contact.phone === 'string' ? contact.phone.trim() : '',
+    location: typeof contact.location === 'string' ? contact.location.trim() : '',
+    address: typeof contact.address === 'string' ? contact.address.trim() : '',
+    postCode: typeof contact.postCode === 'string' ? contact.postCode.trim() : '',
+    country: typeof contact.country === 'string' ? contact.country.trim() : '',
+    linkedin: typeof contact.linkedin === 'string' ? contact.linkedin.trim() : '',
+    github: typeof contact.github === 'string' ? contact.github.trim() : '',
+    portfolio: typeof contact.portfolio === 'string' ? contact.portfolio.trim() : ''
+  };
+
+  const summary = typeof data.summary === 'string' ? data.summary.trim() : '';
+
+  const rawExperience = Array.isArray(data.experience) ? data.experience : [];
+  const normalizedExperience = rawExperience.map((item: any, idx: number) => ({
+    id: item.id || `exp-${idx + 1}-${Date.now()}`,
+    company: typeof item.company === 'string' ? item.company.trim() : 'Company',
+    role: typeof item.role === 'string' ? item.role.trim() : 'Role',
+    location: typeof item.location === 'string' ? item.location.trim() : '',
+    startDate: typeof item.startDate === 'string' ? item.startDate.trim() : '',
+    endDate: typeof item.endDate === 'string' ? item.endDate.trim() : 'Present',
+    current: Boolean(item.current || item.endDate?.toLowerCase() === 'present'),
+    achievements: Array.isArray(item.achievements)
+      ? item.achievements.map((a: any) => String(a).trim()).filter(Boolean)
+      : (typeof item.achievements === 'string' ? [item.achievements.trim()] : [])
+  }));
+
+  const rawEducation = Array.isArray(data.education) ? data.education : [];
+  const normalizedEducation = rawEducation.map((item: any, idx: number) => ({
+    id: item.id || `edu-${idx + 1}-${Date.now()}`,
+    institution: typeof item.institution === 'string' ? item.institution.trim() : '',
+    degree: typeof item.degree === 'string' ? item.degree.trim() : '',
+    fieldOfStudy: typeof item.fieldOfStudy === 'string' ? item.fieldOfStudy.trim() : '',
+    startDate: typeof item.startDate === 'string' ? item.startDate.trim() : '',
+    endDate: typeof item.endDate === 'string' ? item.endDate.trim() : '',
+    location: typeof item.location === 'string' ? item.location.trim() : '',
+    gpa: typeof item.gpa === 'string' ? item.gpa.trim() : ''
+  }));
+
+  const rawSkills = data.skills || {};
+  const normalizedSkills = {
+    technical: Array.isArray(rawSkills.technical)
+      ? rawSkills.technical.map((s: any) => String(s).trim()).filter(Boolean)
+      : [],
+    soft: Array.isArray(rawSkills.soft)
+      ? rawSkills.soft.map((s: any) => String(s).trim()).filter(Boolean)
+      : [],
+    toolsAndFrameworks: Array.isArray(rawSkills.toolsAndFrameworks)
+      ? rawSkills.toolsAndFrameworks.map((s: any) => String(s).trim()).filter(Boolean)
+      : [],
+    certifications: Array.isArray(rawSkills.certifications)
+      ? rawSkills.certifications.map((s: any) => String(s).trim()).filter(Boolean)
+      : []
+  };
+
+  const rawProjects = Array.isArray(data.projects) ? data.projects : [];
+  const normalizedProjects = rawProjects.map((p: any, idx: number) => ({
+    id: p.id || `proj-${idx + 1}-${Date.now()}`,
+    name: typeof p.name === 'string' ? p.name.trim() : 'Project',
+    description: typeof p.description === 'string' ? p.description.trim() : '',
+    technologies: Array.isArray(p.technologies)
+      ? p.technologies.map((t: any) => String(t).trim()).filter(Boolean)
+      : [],
+    link: typeof p.link === 'string' ? p.link.trim() : ''
+  }));
+
+  const rawStrengths = Array.isArray(data.strengths)
+    ? data.strengths.map((s: any) => String(s).trim()).filter(Boolean)
+    : [];
+
+  return {
+    contact: normalizedContact,
+    summary,
+    experience: normalizedExperience,
+    education: normalizedEducation,
+    skills: normalizedSkills,
+    projects: normalizedProjects,
+    strengths: rawStrengths
+  };
 }
 
 // --------------------------------------------------------
@@ -124,18 +271,16 @@ Respond strictly with valid JSON only. Do not include markdown code blocks (\`\`
       contentsPayload = [promptText + `\n\nRAW RESUME TEXT:\n${rawText}`];
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+    const response = await generateWithGeminiFallback(ai, {
       contents: contentsPayload,
       config: {
         responseMimeType: 'application/json'
       }
     });
 
-    const outputText = response.text || '{}';
-    const cleanJson = outputText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsedData = JSON.parse(cleanJson);
-    return res.json({ success: true, data: parsedData });
+    const parsedData = extractJsonFromResponse(response.text || '{}');
+    const normalized = normalizeParsedResume(parsedData);
+    return res.json({ success: true, data: normalized });
   } catch (error: any) {
     console.error('Error in parse-resume:', error);
     return res.status(500).json({
@@ -283,17 +428,14 @@ Respond STRICTLY with valid JSON matching this schema:
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+    const response = await generateWithGeminiFallback(ai, {
       contents: prompt,
       config: {
         responseMimeType: 'application/json'
       }
     });
 
-    const outputText = response.text || '{}';
-    const cleanJson = outputText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const resultJson = JSON.parse(cleanJson);
+    const resultJson = extractJsonFromResponse(response.text || '{}');
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
     console.error('Error in tailor-application:', error);

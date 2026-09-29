@@ -44,12 +44,16 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
     (!masterProfile.skills?.technical || masterProfile.skills.technical.length === 0) &&
     !masterProfile.attachedCvFileName;
 
-  // Handle PDF file upload
+  // Handle PDF/Image/Doc file upload
   const handlePdfFileUpload = (file: File) => {
     if (!file) return;
     setClearedAlert(false);
+    setRawTextModal(false);
 
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+
+    if (isPdf || isImage) {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const result = e.target?.result as string;
@@ -58,7 +62,7 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
           const base64Data = result.split(',')[1] || result;
           await onParseResumeRawText({
             fileBase64: base64Data,
-            fileMimeType: 'application/pdf',
+            fileMimeType: isPdf ? 'application/pdf' : (file.type || 'image/png'),
             fileName: file.name,
             fileSize: formatFileSize(file.size)
           });
@@ -85,6 +89,7 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handlePdfFileUpload(file);
+    e.target.value = '';
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { ResumeData, TailoredApplication, ApplicationStatus } from './types';
 import { emptyMasterProfile } from './mockData';
 import { Navbar } from './components/Navbar';
