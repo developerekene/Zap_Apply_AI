@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Download, Copy, Check, Printer, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
 import { ResumeData } from '../types';
+import { calculateTotalYearsOfExperience } from '../utils/experienceCalculator';
 import jsPDF from 'jspdf';
 
 interface ResumePdfViewerProps {
@@ -67,18 +68,13 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
         pdfDoc.line(w - pad, h - pad - cLen, w - pad, h - pad);
       };
 
-      // Helper to check if a block of height requiredHeight fits on current page, or transitions cleanly to page 2 (never page 3)
+      // Helper to check if a block of height requiredHeight fits on current page, or transitions cleanly to a new page
       const ensureSpace = (requiredHeight: number): boolean => {
         if (y + requiredHeight > maxY) {
-          if (currentPage === 1) {
-            doc.addPage();
-            currentPage = 2;
-            y = topMargin + 4;
-            return true;
-          } else {
-            // Already on Page 2: do not create page 3
-            return false;
-          }
+          doc.addPage();
+          currentPage++;
+          y = topMargin + 4;
+          return true;
         }
         return true;
       };
@@ -251,10 +247,7 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
               const bulletLines = doc.splitTextToSize(bullet, contentWidth - 5);
               const bulletTotalHeight = bulletLines.length * bodyLineSpacing;
 
-              if (!ensureSpace(bulletTotalHeight)) {
-                // If on page 2 and out of space, stop adding more bullets to protect 2-page max
-                break;
-              }
+              ensureSpace(bulletTotalHeight);
 
               // Draw bullet symbol
               doc.setFont('helvetica', 'bold');
@@ -338,8 +331,8 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
         }
       }
 
-      // Total pages count (capped at 2)
-      const totalPages = Math.min(doc.getNumberOfPages(), 2);
+      // Total pages count
+      const totalPages = doc.getNumberOfPages();
 
       // Render footers, page numbering, and corner frame accents on each page
       for (let p = 1; p <= totalPages; p++) {
@@ -369,8 +362,9 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
   };
 
   const getPlainText = () => {
-    let text = `${resumeData.contact.fullName || ''}\n`;
-    text += `${[resumeData.contact.location, resumeData.contact.phone, resumeData.contact.email, resumeData.contact.linkedin, resumeData.contact.portfolio, resumeData.contact.github].filter(Boolean).join(' | ')}\n\n`;
+    const contact = resumeData.contact || {};
+    let text = `${contact.fullName || ''}\n`;
+    text += `${[contact.location, contact.phone, contact.email, contact.linkedin, contact.portfolio, contact.github].filter(Boolean).join(' | ')}\n\n`;
 
     if (resumeData.summary) {
       text += `PROFESSIONAL SUMMARY\n${resumeData.summary}\n\n`;
@@ -509,18 +503,18 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
           {/* Resume Header / Contact Info */}
           <div className={`border-b-2 border-slate-900 text-center ${density === 'compact' ? 'pb-2.5 mb-3.5' : 'pb-3.5 mb-4'}`}>
             <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-slate-950 mb-0.5">
-              {resumeData.contact.fullName || 'Candidate Name'}
+              {resumeData?.contact?.fullName || 'Candidate Name'}
             </h1>
             <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-700 font-medium">
-              {resumeData.contact.location && <span>{resumeData.contact.location}</span>}
-              {resumeData.contact.phone && <span>• {resumeData.contact.phone}</span>}
-              {resumeData.contact.email && <span>• {resumeData.contact.email}</span>}
+              {resumeData?.contact?.location && <span>{resumeData.contact.location}</span>}
+              {resumeData?.contact?.phone && <span>• {resumeData.contact.phone}</span>}
+              {resumeData?.contact?.email && <span>• {resumeData.contact.email}</span>}
             </div>
-            {(resumeData.contact.linkedin || resumeData.contact.portfolio || resumeData.contact.github) && (
+            {(resumeData?.contact?.linkedin || resumeData?.contact?.portfolio || resumeData?.contact?.github) && (
               <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-0.5 text-[10.5px] text-slate-600 mt-0.5">
-                {resumeData.contact.linkedin && <span>LinkedIn: {resumeData.contact.linkedin}</span>}
-                {resumeData.contact.portfolio && <span>• Portfolio: {resumeData.contact.portfolio}</span>}
-                {resumeData.contact.github && <span>• GitHub: {resumeData.contact.github}</span>}
+                {resumeData?.contact?.linkedin && <span>LinkedIn: {resumeData.contact.linkedin}</span>}
+                {resumeData?.contact?.portfolio && <span>• Portfolio: {resumeData.contact.portfolio}</span>}
+                {resumeData?.contact?.github && <span>• GitHub: {resumeData.contact.github}</span>}
               </div>
             )}
           </div>
@@ -575,8 +569,11 @@ export const ResumePdfViewer: React.FC<ResumePdfViewerProps> = ({
           {/* Professional Experience */}
           {resumeData.experience?.length > 0 && (
             <div className={`${density === 'compact' ? 'mb-3' : 'mb-4'}`}>
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-950 border-b border-slate-300 pb-0.5 mb-2">
-                PROFESSIONAL EXPERIENCE
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-950 border-b border-slate-300 pb-0.5 mb-2 flex items-center justify-between">
+                <span>PROFESSIONAL EXPERIENCE</span>
+                <span className="text-[10px] font-semibold text-indigo-700 normal-case bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                  {resumeData.totalYearsOfExperience || calculateTotalYearsOfExperience(resumeData.experience).text} career timeline
+                </span>
               </h2>
               <div className={density === 'compact' ? 'space-y-2.5' : 'space-y-3.5'}>
                 {resumeData.experience.map((exp, idx) => (

@@ -16,6 +16,7 @@ import {
   Check
 } from 'lucide-react';
 import { ResumeData, TailoredApplication } from '../types';
+import { calculateTotalYearsOfExperience } from '../utils/experienceCalculator';
 import { ResumePdfViewer } from './ResumePdfViewer';
 import { CoverLetterView } from './CoverLetterView';
 import { PersonalStatementView } from './PersonalStatementView';
@@ -123,13 +124,6 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   const handleRunTailor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobDescription.trim()) return;
-
-    if (!masterProfile.contact.fullName.trim() && (!masterProfile.experience || masterProfile.experience.length === 0)) {
-      if (confirm('Your Master Candidate Profile is currently empty. Would you like to update your profile with your contact details, experience, and skills first for the best tailoring results?')) {
-        if (onGoToProfile) onGoToProfile();
-        return;
-      }
-    }
 
     const result = await onGenerateTailoredApp({
       jobTitle: jobTitle.trim(),
@@ -261,7 +255,7 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
-                  <strong>Master Profile Active:</strong> {masterProfile.contact.fullName || 'Candidate'} ({masterProfile.experience?.length || 0} positions, {masterProfile.skills?.technical?.length || 0} technical skills)
+                  <strong>Master Profile Active:</strong> {masterProfile?.contact?.fullName || 'Candidate'} ({calculateTotalYearsOfExperience(masterProfile?.experience).text} experience • {masterProfile?.experience?.length || 0} {masterProfile?.experience?.length === 1 ? 'role' : 'roles'} • {masterProfile?.skills?.technical?.length || 0} technical skills)
                 </span>
               </div>
               {onGoToProfile && (
@@ -459,7 +453,7 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
                 }`}
               >
                 <FileText className="w-4 h-4" />
-                <span>Tailored ATS Resume</span>
+                <span>Tailored ATS Resume ({activeGeneratedApp.tailoredResume?.totalYearsOfExperience || calculateTotalYearsOfExperience(activeGeneratedApp.tailoredResume?.experience).text})</span>
               </button>
 
               <button
@@ -532,8 +526,8 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               coverLetterText={activeGeneratedApp.coverLetter}
               companyName={activeGeneratedApp.companyName}
               jobTitle={activeGeneratedApp.jobTitle}
-              candidateName={activeGeneratedApp.tailoredResume.contact.fullName}
-              contact={activeGeneratedApp.tailoredResume.contact}
+              candidateName={activeGeneratedApp.tailoredResume?.contact?.fullName || 'Candidate'}
+              contact={activeGeneratedApp.tailoredResume?.contact}
               onUpdateText={(newText) => {
                 activeGeneratedApp.coverLetter = newText;
               }}
@@ -545,8 +539,8 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               personalStatementText={activeGeneratedApp.personalStatement || ''}
               companyName={activeGeneratedApp.companyName}
               jobTitle={activeGeneratedApp.jobTitle}
-              candidateName={activeGeneratedApp.tailoredResume.contact.fullName}
-              contact={activeGeneratedApp.tailoredResume.contact}
+              candidateName={activeGeneratedApp.tailoredResume?.contact?.fullName || 'Candidate'}
+              contact={activeGeneratedApp.tailoredResume?.contact}
               onUpdateText={(newText) => {
                 activeGeneratedApp.personalStatement = newText;
               }}
@@ -559,9 +553,9 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
               jobTitle={activeGeneratedApp.jobTitle}
               companyName={activeGeneratedApp.companyName}
               onAddKeywordToResume={(kw) => {
-                if (!activeGeneratedApp.tailoredResume.skills.technical.includes(kw)) {
-                  activeGeneratedApp.tailoredResume.skills.technical.push(kw);
-                  alert(`Added "${kw}" to Technical Skills in tailored resume.`);
+                const currentTech = activeGeneratedApp.tailoredResume?.skills?.technical || [];
+                if (!currentTech.includes(kw)) {
+                  activeGeneratedApp.tailoredResume.skills.technical = [...currentTech, kw];
                 }
               }}
             />

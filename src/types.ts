@@ -56,6 +56,8 @@ export interface ResumeData {
   skills: SkillsCategory;
   projects: ProjectItem[];
   strengths?: string[];
+  totalYearsOfExperience?: string;
+  calculatedYears?: number;
   attachedCvFileName?: string;
   attachedCvDate?: string;
   attachedCvSize?: string;
@@ -94,4 +96,5 @@ export interface TailoredApplication {
   atsAnalysis: AtsAnalysis;
   salaryExpectation?: string;
   applicationUrl?: string;
+  totalYearsOfExperience?: string;
 }

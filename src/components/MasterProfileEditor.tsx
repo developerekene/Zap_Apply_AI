@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Upload, Sparkles, Plus, Trash2, CheckCircle2, Edit3, Shield, Award, Briefcase, GraduationCap, Code, AlertCircle, FileCheck, RefreshCw } from 'lucide-react';
 import { ResumeData, ExperienceItem, EducationItem, ProjectItem } from '../types';
+import { calculateTotalYearsOfExperience } from '../utils/experienceCalculator';
 
 interface MasterProfileEditorProps {
   masterProfile: ResumeData;
@@ -620,8 +621,15 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
 
         {activeSection === 'experience' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900">Work Experience ({masterProfile.experience?.length || 0})</h3>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-slate-900">Work Experience ({masterProfile.experience?.length || 0})</h3>
+                {masterProfile.experience?.length > 0 && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                    {calculateTotalYearsOfExperience(masterProfile.experience).text} total career history
+                  </span>
+                )}
+              </div>
               <button
                 onClick={handleAddExperience}
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer"

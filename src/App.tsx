@@ -56,6 +56,7 @@ export default function App() {
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [parseStatus, setParseStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Sync state to LocalStorage
   useEffect(() => {
@@ -138,6 +139,7 @@ export default function App() {
     fileSize?: string;
   }) => {
     setIsParsing(true);
+    setParseStatus(null);
     try {
       const res = await fetch('/api/gemini/parse-resume', {
         method: 'POST',
@@ -161,10 +163,17 @@ export default function App() {
         attachedCvSize: payload.fileSize || ''
       };
       setMasterProfile(parsedResume);
-      alert('Resume parsed successfully! Your Master Candidate Profile and attached CV have been loaded.');
+      setActiveTab('profile');
+      setParseStatus({
+        type: 'success',
+        message: 'Resume parsed successfully! Summary, Contact, Experience, Skills, and Education loaded into your Master Profile.'
+      });
     } catch (err: any) {
       console.error('Parse resume error:', err);
-      alert('Error parsing resume: ' + err.message);
+      setParseStatus({
+        type: 'error',
+        message: 'Error extracting CV information: ' + err.message
+      });
     } finally {
       setIsParsing(false);
     }
@@ -212,7 +221,32 @@ export default function App() {
         totalApplicationsCount={applications.length}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {parseStatus && (
+          <div
+            className={`p-4 rounded-2xl flex items-center justify-between border shadow-xs animate-in fade-in transition-all ${
+              parseStatus.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              {parseStatus.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              )}
+              <span className="text-xs sm:text-sm font-semibold">{parseStatus.message}</span>
+            </div>
+            <button
+              onClick={() => setParseStatus(null)}
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {activeTab === 'generator' && (
           <OneClickGenerator
             masterProfile={masterProfile}
