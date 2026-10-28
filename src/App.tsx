@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
-import { ResumeData, TailoredApplication, ApplicationStatus } from './types';
+import { ResumeData, TailoredApplication, ApplicationStatus, MembershipTier } from './types';
 import { emptyMasterProfile } from './mockData';
 import { Navbar } from './components/Navbar';
 import { OneClickGenerator } from './components/OneClickGenerator';
 import { MasterProfileEditor } from './components/MasterProfileEditor';
 import { AtsOptimizerView } from './components/AtsOptimizerView';
 import { ApplicationTracker } from './components/ApplicationTracker';
+import { JobMatchesView } from './components/JobMatchesView';
+import { MembershipModal } from './components/MembershipModal';
 
 export default function App() {
   // Master Profile State with LocalStorage persistence
@@ -52,6 +54,27 @@ export default function App() {
   // Navigation & Active Application View
   const [activeTab, setActiveTab] = useState<string>('generator');
   const [activeGeneratedApp, setActiveGeneratedApp] = useState<TailoredApplication | null>(null);
+
+  // Membership Scheme State (Silver - free mode, Gold - £4.99/mo, Platinum - £9.99/mo)
+  const [membershipTier, setMembershipTier] = useState<MembershipTier>(() => {
+    const saved = localStorage.getItem('zap_membership_tier');
+    if (saved === 'gold' || saved === 'platinum' || saved === 'silver') {
+      return saved as MembershipTier;
+    }
+    return 'silver'; // Silver - free mode default
+  });
+  const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
+  const [prefilledJob, setPrefilledJob] = useState<{
+    jobTitle: string;
+    companyName: string;
+    jobLocation: string;
+    jobDescription: string;
+  } | null>(null);
+
+  // Sync membership to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('zap_membership_tier', membershipTier);
+  }, [membershipTier]);
 
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -219,6 +242,8 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         totalApplicationsCount={applications.length}
+        membershipTier={membershipTier}
+        onOpenMembershipModal={() => setIsMembershipModalOpen(true)}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -238,15 +263,31 @@ export default function App() {
               )}
               <span className="text-xs sm:text-sm font-semibold">{parseStatus.message}</span>
             </div>
-            <button
-              onClick={() => setParseStatus(null)}
-              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors"
-              title="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center space-x-2">
+              {parseStatus.type === 'success' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setParseStatus(null);
+                    setActiveTab('jobs');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer shrink-0"
+                >
+                  Find Matching Jobs Now &rarr;
+                </button>
+              )}
+              <button
+                onClick={() => setParseStatus(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
+
+        {/* 1-Click Tailor Studio */}
         {activeTab === 'generator' && (
           <OneClickGenerator
             masterProfile={masterProfile}
@@ -257,9 +298,26 @@ export default function App() {
               setApplications(prev => [app, ...prev.filter(a => a.id !== app.id)]);
             }}
             onGoToProfile={() => setActiveTab('profile')}
+            initialJob={prefilledJob}
+            membershipTier={membershipTier}
+            onOpenMembershipModal={() => setIsMembershipModalOpen(true)}
           />
         )}
 
+        {/* AI Job Matches & Apply Links Hub */}
+        {activeTab === 'jobs' && (
+          <JobMatchesView
+            masterProfile={masterProfile}
+            membershipTier={membershipTier}
+            onOpenMembershipModal={() => setIsMembershipModalOpen(true)}
+            onTailorForJob={(job) => {
+              setPrefilledJob(job);
+              setActiveTab('generator');
+            }}
+          />
+        )}
+
+        {/* Master Profile & Vault */}
         {activeTab === 'profile' && (
           <MasterProfileEditor
             masterProfile={masterProfile}
@@ -267,9 +325,11 @@ export default function App() {
             onParseResumeRawText={handleParseResumeData}
             isParsing={isParsing}
             onResetProfile={handleResetProfile}
+            onGoToJobs={() => setActiveTab('jobs')}
           />
         )}
 
+        {/* ATS Keyword Optimizer */}
         {activeTab === 'ats' && activeGeneratedApp && (
           <AtsOptimizerView
             atsAnalysis={activeGeneratedApp.atsAnalysis}
@@ -294,11 +354,12 @@ export default function App() {
           <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-3 shadow-xs">
             <h3 className="text-lg font-bold text-slate-900">No Application Selected for ATS Audit</h3>
             <p className="text-xs text-slate-500">
-              Paste a job description in the 1-Click Tailor Studio to run an ATS keyword optimization report.
+              Paste a job description in the 1-Click Tailor Studio or pick a role from Job Matches to run an ATS keyword optimization report.
             </p>
           </div>
         )}
 
+        {/* Application Tracker */}
         {activeTab === 'tracker' && (
           <ApplicationTracker
             applications={applications}
@@ -309,6 +370,14 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Interactive Membership Scheme Modal (Silver, Gold, Platinum) */}
+      <MembershipModal
+        isOpen={isMembershipModalOpen}
+        onClose={() => setIsMembershipModalOpen(false)}
+        currentTier={membershipTier}
+        onSelectTier={(newTier) => setMembershipTier(newTier)}
+      />
     </div>
   );
 }

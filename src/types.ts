@@ -98,3 +98,35 @@ export interface TailoredApplication {
   applicationUrl?: string;
   totalYearsOfExperience?: string;
 }
+
+export interface JobMatchItem {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  workMode: 'Remote' | 'Hybrid' | 'On-site';
+  salaryRange?: string;
+  experienceRequired: string;
+  matchScore: number;
+  description: string;
+  matchedSkills: string[];
+  applyUrl: string;
+  source: string;
+  postedDate?: string;
+  urgency?: 'Actively Hiring' | 'New' | 'High Match';
+}
+
+export type MembershipTier = 'silver' | 'gold' | 'platinum';
+
+export interface MembershipPlan {
+  id: MembershipTier;
+  name: string;
+  price: string;
+  priceNumber: number;
+  period: string;
+  badge: string;
+  description: string;
+  features: string[];
+  highlight?: boolean;
+  buttonLabel: string;
+}

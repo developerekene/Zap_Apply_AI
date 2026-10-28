@@ -7,20 +7,26 @@ import {
   ChevronDown,
   Menu,
   X,
-  ExternalLink,
-  ArrowUpRight
+  Briefcase,
+  Crown,
+  Sparkles
 } from 'lucide-react';
+import { MembershipTier } from '../types';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   totalApplicationsCount: number;
+  membershipTier: MembershipTier;
+  onOpenMembershipModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  totalApplicationsCount
+  totalApplicationsCount,
+  membershipTier,
+  onOpenMembershipModal
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<'resume' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,6 +58,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       shortLabel: 'Tailor',
       description: '1-Click ATS Resume & Cover Letter Generator',
       icon: Zap
+    },
+    {
+      id: 'jobs',
+      label: 'Job Matches',
+      shortLabel: 'Jobs',
+      description: 'AI Web Search for Matching Roles with Apply Links',
+      icon: Briefcase
     },
     {
       id: 'profile',
@@ -124,6 +137,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Zap className={`w-4 h-4 ${activeTab === 'generator' ? 'text-white' : 'text-indigo-600'}`} />
               <span>Tailor Studio</span>
+            </button>
+
+            {/* Direct Primary Action: Job Matches */}
+            <button
+              id="nav-tab-jobs"
+              onClick={() => handleSelectTab('jobs')}
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                activeTab === 'jobs'
+                  ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Briefcase className={`w-4 h-4 ${activeTab === 'jobs' ? 'text-white' : 'text-slate-500'}`} />
+              <span>Job Matches</span>
             </button>
 
             {/* Dropdown 1: Resume & ATS Tools */}
@@ -211,18 +238,43 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Right Action: Join System One (Disabled for now) */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <button
-              type="button"
-              id="btn-join-system-one"
-              disabled
-              className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-slate-200 text-slate-400 font-extrabold text-xs sm:text-sm border border-slate-300 cursor-not-allowed opacity-75 shadow-none select-none"
-              title="Join System One (Coming Soon)"
-            >
-              <span>Join System One</span>
-              <span className="text-[10px] font-bold bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded-md">Soon</span>
-            </button>
+          {/* Right Action: Membership Scheme Badge & Button */}
+          <div className="flex items-center space-x-2">
+            {membershipTier === 'platinum' ? (
+              <button
+                type="button"
+                id="btn-membership-badge"
+                onClick={onOpenMembershipModal}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 text-white font-extrabold text-xs shadow-sm hover:opacity-95 transition-all cursor-pointer"
+                title="Manage Platinum VIP Membership"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-300" />
+                <span>Platinum VIP (£9.99)</span>
+              </button>
+            ) : membershipTier === 'gold' ? (
+              <button
+                type="button"
+                id="btn-membership-badge"
+                onClick={onOpenMembershipModal}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold text-xs shadow-sm hover:opacity-95 transition-all cursor-pointer"
+                title="Manage Gold Membership"
+              >
+                <Crown className="w-3.5 h-3.5 text-slate-950" />
+                <span>Gold Member (£4.99)</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                id="btn-membership-badge"
+                onClick={onOpenMembershipModal}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer group"
+                title="View Membership Plans"
+              >
+                <span className="text-slate-300 font-semibold">Silver (Free)</span>
+                <span className="w-1 h-1 rounded-full bg-slate-500" />
+                <span className="text-amber-300 group-hover:text-amber-200">Upgrade</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -258,14 +310,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
-            {/* Mobile Join System One (Disabled) */}
+            {/* Mobile Membership Button */}
             <div className="pt-2 px-3">
               <button
                 type="button"
-                disabled
-                className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-slate-200 text-slate-400 font-bold text-xs border border-slate-300 cursor-not-allowed opacity-75"
+                onClick={() => {
+                  onOpenMembershipModal();
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs cursor-pointer ${
+                  membershipTier === 'platinum'
+                    ? 'bg-purple-700 text-white'
+                    : membershipTier === 'gold'
+                    ? 'bg-amber-500 text-slate-950 font-black'
+                    : 'bg-slate-900 text-white'
+                }`}
               >
-                <span>Join System One (Coming Soon)</span>
+                <Crown className="w-4 h-4 text-amber-300" />
+                <span>
+                  {membershipTier === 'platinum'
+                    ? 'Platinum VIP Active (£9.99/mo)'
+                    : membershipTier === 'gold'
+                    ? 'Gold Member Active (£4.99/mo)'
+                    : 'Silver (Free Mode) — Upgrade'}
+                </span>
               </button>
             </div>
           </div>

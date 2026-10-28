@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Upload, Sparkles, Plus, Trash2, CheckCircle2, Edit3, Shield, Award, Briefcase, GraduationCap, Code, AlertCircle, FileCheck, RefreshCw } from 'lucide-react';
+import { FileText, Upload, Sparkles, Plus, Trash2, CheckCircle2, Edit3, Shield, Award, Briefcase, GraduationCap, Code, AlertCircle, FileCheck, RefreshCw, ArrowRight, Search } from 'lucide-react';
 import { ResumeData, ExperienceItem, EducationItem, ProjectItem } from '../types';
 import { calculateTotalYearsOfExperience } from '../utils/experienceCalculator';
 
@@ -15,6 +15,7 @@ interface MasterProfileEditorProps {
   }) => Promise<void>;
   isParsing: boolean;
   onResetProfile?: () => void;
+  onGoToJobs?: () => void;
 }
 
 const formatFileSize = (bytes?: number): string => {
@@ -29,7 +30,8 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
   onUpdateMasterProfile,
   onParseResumeRawText,
   isParsing,
-  onResetProfile
+  onResetProfile,
+  onGoToJobs
 }) => {
   const [rawTextModal, setRawTextModal] = useState(false);
   const [pasteText, setPasteText] = useState('');
@@ -349,6 +351,40 @@ export const MasterProfileEditor: React.FC<MasterProfileEditorProps> = ({
                 <span>Remove CV</span>
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Find Matching Jobs Prompt Banner if Profile has Experience / CV */}
+        {masterProfile.experience && masterProfile.experience.length > 0 && onGoToJobs && (
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border-2 border-emerald-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+            <div className="flex items-start sm:items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shrink-0">
+                <Search className="w-5 h-5 text-white" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-extrabold text-sm text-slate-900">
+                    Live Job Search for Your CV
+                  </h4>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {calculateTotalYearsOfExperience(masterProfile.experience).formatted}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Search live openings matching your verified experience & job title with direct application links on LinkedIn, Indeed, Reed, and Google Jobs.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="btn-goto-matching-jobs"
+              onClick={onGoToJobs}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center space-x-2 shrink-0 cursor-pointer self-stretch sm:self-auto justify-center"
+            >
+              <span>Explore Matching Roles & Apply</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         )}
 

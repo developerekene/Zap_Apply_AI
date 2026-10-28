@@ -73,6 +73,14 @@ interface OneClickGeneratorProps {
   activeGeneratedApp: TailoredApplication | null;
   onSaveToTracker: (app: TailoredApplication) => void;
   onGoToProfile?: () => void;
+  initialJob?: {
+    jobTitle: string;
+    companyName: string;
+    jobLocation: string;
+    jobDescription: string;
+  } | null;
+  membershipTier?: string;
+  onOpenMembershipModal?: () => void;
 }
 
 export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
@@ -81,16 +89,28 @@ export const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   isGenerating,
   activeGeneratedApp,
   onSaveToTracker,
-  onGoToProfile
+  onGoToProfile,
+  initialJob,
+  membershipTier = 'silver',
+  onOpenMembershipModal
 }) => {
-  const [jobTitle, setJobTitle] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [jobLocation, setJobLocation] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
+  const [jobTitle, setJobTitle] = useState(initialJob?.jobTitle || '');
+  const [companyName, setCompanyName] = useState(initialJob?.companyName || '');
+  const [jobLocation, setJobLocation] = useState(initialJob?.jobLocation || '');
+  const [jobDescription, setJobDescription] = useState(initialJob?.jobDescription || '');
   const [customPrompt, setCustomPrompt] = useState('');
   const [outputTab, setOutputTab] = useState<'resume' | 'cover' | 'statement' | 'ats'>('resume');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
   const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    if (initialJob) {
+      if (initialJob.jobTitle) setJobTitle(initialJob.jobTitle);
+      if (initialJob.companyName) setCompanyName(initialJob.companyName);
+      if (initialJob.jobLocation) setJobLocation(initialJob.jobLocation);
+      if (initialJob.jobDescription) setJobDescription(initialJob.jobDescription);
+    }
+  }, [initialJob]);
 
   // Cycle through generation stages when AI is tailoring
   useEffect(() => {
