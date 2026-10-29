@@ -9,6 +9,7 @@ import { AtsOptimizerView } from './components/AtsOptimizerView';
 import { ApplicationTracker } from './components/ApplicationTracker';
 import { JobMatchesView } from './components/JobMatchesView';
 import { MembershipModal } from './components/MembershipModal';
+import { Footer } from './components/Footer';
 
 export default function App() {
   // Master Profile State with LocalStorage persistence
@@ -370,6 +371,13 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Global Application Footer */}
+      <Footer
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenMembershipModal={() => setIsMembershipModalOpen(true)}
+      />
 
       {/* Interactive Membership Scheme Modal (Silver, Gold, Platinum) */}
       <MembershipModal

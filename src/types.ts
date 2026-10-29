@@ -111,9 +111,32 @@ export interface JobMatchItem {
   description: string;
   matchedSkills: string[];
   applyUrl: string;
+  companyCareersUrl?: string;
+  isDirectEmployer?: boolean;
   source: string;
   postedDate?: string;
   urgency?: 'Actively Hiring' | 'New' | 'High Match';
+  portalLinks?: {
+    companySite?: string;
+    linkedin?: string;
+    indeed?: string;
+    googleJobs?: string;
+    reed?: string;
+  };
+}
+
+export interface RecruitmentAgency {
+  id: string;
+  name: string;
+  website: string;
+  contactUrl: string;
+  specialization: string;
+  location: string;
+  description: string;
+  rolesTypicallyPlaced: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  directOutreachTip?: string;
 }
 
 export type MembershipTier = 'silver' | 'gold' | 'platinum';
@@ -130,3 +153,4 @@ export interface MembershipPlan {
   highlight?: boolean;
   buttonLabel: string;
 }
+

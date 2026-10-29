@@ -789,7 +789,7 @@ Respond STRICTLY with valid JSON matching this exact structure:
 });
 
 // --------------------------------------------------------
-// API ROUTE 3: Search Matching Jobs from Web by CV Title & Experience
+// API ROUTE 3: Search Matching Jobs from Direct Company Websites & Recruitment Agencies
 // --------------------------------------------------------
 app.post('/api/gemini/search-matching-jobs', async (req, res) => {
   try {
@@ -803,35 +803,63 @@ app.post('/api/gemini/search-matching-jobs', async (req, res) => {
     const ai = getGeminiClient();
 
     const prompt = `
-You are an elite executive talent recruiter, career agent, and employment search specialist.
-A candidate with the following verified credentials needs active, highly relevant job openings matching their background:
+You are an elite executive talent recruiter, career agent, and corporate employment search specialist.
+A candidate with the following verified credentials needs:
+1. Active roles on DIRECT COMPANY WEBSITES (direct employer careers pages, not just job board aggregators).
+2. SPECIALIST RECRUITMENT AGENCIES & HEADHUNTERS in their industry/region they can reach out to directly with their CV.
+
+CANDIDATE DETAILS:
 - Primary Target Title: ${detectedTitle}
 - Documented Years of Experience: ${detectedYears}
 - Preferred Location: ${detectedLocation}
 - Core Competencies / Skills: ${skillsList || 'Technical & Professional Competencies'}
 ${keywords ? `- Focus Keywords: ${keywords}` : ''}
 
-Generate 6 realistic, active, and high-relevance job vacancies matching their exact title and experience level.
-Ensure every vacancy reflects their verified ${detectedYears} (do not suggest entry-level if they have 5+ years, and do not suggest 10+ year executive if they have 2 years).
+TASK:
+1. Generate 6 realistic, active, and high-relevance direct vacancies on DIRECT COMPANY WEBSITES matching their exact title and experience level (${detectedYears}).
+   - Prioritize real reputable hiring employers (e.g. tech scaleups, corporate leaders, innovative enterprises).
+   - Set "isDirectEmployer" to true.
+   - Provide "companyCareersUrl" indicating the direct company careers page URL or official portal.
+2. Generate 4 to 6 top verified SPECIALIST RECRUITMENT AGENCIES / HEADHUNTING COMPANIES that specialize in placing candidates in this sector (${detectedTitle}) in or around ${detectedLocation}.
+   - Include direct agency name, official website, candidate submission URL, contact email/phone, specialization niche, and a specific direct outreach tip for the candidate.
 
 Respond strictly with valid JSON only matching this exact schema:
-[
-  {
-    "id": "job-1",
-    "title": "Exact Role Title",
-    "company": "Real Hiring Company Name",
-    "location": "${detectedLocation}",
-    "workMode": "Hybrid",
-    "salaryRange": "£60,000 - £80,000",
-    "experienceRequired": "${detectedYears}",
-    "matchScore": 96,
-    "description": "2-3 concise sentences describing key responsibilities, challenges, and team mission.",
-    "matchedSkills": ["Skill 1", "Skill 2", "Skill 3"],
-    "source": "LinkedIn Jobs",
-    "postedDate": "2 days ago",
-    "urgency": "Actively Hiring"
-  }
-]
+{
+  "jobs": [
+    {
+      "id": "job-1",
+      "title": "Exact Role Title",
+      "company": "Real Hiring Company Name",
+      "location": "${detectedLocation}",
+      "workMode": "Hybrid",
+      "salaryRange": "£65,000 - £85,000",
+      "experienceRequired": "${detectedYears}",
+      "matchScore": 96,
+      "description": "2-3 concise sentences describing key responsibilities, challenges, and team mission.",
+      "matchedSkills": ["Skill 1", "Skill 2", "Skill 3"],
+      "source": "Direct Company Careers",
+      "isDirectEmployer": true,
+      "companyCareersUrl": "https://www.company.com/careers",
+      "postedDate": "1 day ago",
+      "urgency": "Actively Hiring"
+    }
+  ],
+  "recruitmentAgencies": [
+    {
+      "id": "agency-1",
+      "name": "Specialist Recruitment Agency Name",
+      "website": "https://www.agencywebsite.com",
+      "contactUrl": "https://www.agencywebsite.com/submit-cv",
+      "specialization": "Software Engineering & Tech Recruitment",
+      "location": "${detectedLocation}",
+      "description": "Top-rated specialist recruitment consultancy placing mid to senior professionals directly with high-growth companies.",
+      "rolesTypicallyPlaced": ["${detectedTitle}", "Tech Lead", "Senior Developer"],
+      "contactEmail": "techdesk@agencywebsite.com",
+      "contactPhone": "+44 20 7946 0192",
+      "directOutreachTip": "Send an introductory email referencing your verified ${detectedYears} experience and direct portfolio link."
+    }
+  ]
+}
 `;
 
     const response = await generateWithGeminiFallback(ai, {
@@ -841,23 +869,133 @@ Respond strictly with valid JSON only matching this exact schema:
       }
     });
 
-    const parsed = extractJsonFromResponse(response.text || '[]');
-    const jobsArray = Array.isArray(parsed) ? parsed : [];
+    const parsed = extractJsonFromResponse(response.text || '{}');
+    
+    // Extract jobs (handle either object with .jobs or top-level array)
+    let jobsArray: any[] = [];
+    if (Array.isArray(parsed)) {
+      jobsArray = parsed;
+    } else if (Array.isArray(parsed.jobs)) {
+      jobsArray = parsed.jobs;
+    }
+
+    // Extract agencies
+    let agenciesArray: any[] = [];
+    if (parsed && Array.isArray(parsed.recruitmentAgencies)) {
+      agenciesArray = parsed.recruitmentAgencies;
+    }
 
     const isUK = /london|uk|united kingdom|manchester|birmingham|edinburgh|bristol|leeds/i.test(detectedLocation);
     const encodedTitle = encodeURIComponent(detectedTitle);
     const encodedLoc = encodeURIComponent(detectedLocation);
 
-    const enrichedJobs = jobsArray.map((job: any, index: number) => {
-      const companyClean = typeof job.company === 'string' ? job.company.trim() : 'Leading Tech Organization';
-      const titleClean = typeof job.title === 'string' ? job.title.trim() : detectedTitle;
+    // Fallback agencies if model returned fewer than 3
+    if (agenciesArray.length < 3) {
+      const defaultAgencies = isUK
+        ? [
+            {
+              id: 'agency-hays',
+              name: 'Hays Technology Recruitment',
+              website: 'https://www.hays.co.uk/technology',
+              contactUrl: 'https://www.hays.co.uk/job-search',
+              specialization: 'Tech, Software Development & Digital Infrastructure',
+              location: 'London & Nationwide UK',
+              description: 'UK market-leading specialist recruitment agency matching top talent directly with employers and enterprise leaders.',
+              rolesTypicallyPlaced: [detectedTitle, 'Software Engineer', 'Technical Lead'],
+              contactEmail: 'uk.technology@hays.com',
+              contactPhone: '+44 20 7259 8870',
+              directOutreachTip: 'Register your CV on their tech portal and reach out directly to the London/regional consultant.'
+            },
+            {
+              id: 'agency-michaelpage',
+              name: 'Michael Page Technology',
+              website: 'https://www.michaelpage.co.uk/our-expertise/technology',
+              contactUrl: 'https://www.michaelpage.co.uk/submit-cv',
+              specialization: 'Permanent & Contract Software Engineering & Architecture',
+              location: 'London, Manchester & Bristol',
+              description: 'Premier executive recruitment consultancy placing experienced mid to senior candidates directly into permanent roles.',
+              rolesTypicallyPlaced: [detectedTitle, 'Engineering Manager', 'Senior Specialist'],
+              contactEmail: 'technology@michaelpage.com',
+              contactPhone: '+44 20 7269 2200',
+              directOutreachTip: 'Submit your tailored CV with a note specifying your target salary bracket and remote/hybrid preference.'
+            },
+            {
+              id: 'agency-oliverbernard',
+              name: 'Oliver Bernard Tech Headhunters',
+              website: 'https://www.oliverbernard.com',
+              contactUrl: 'https://www.oliverbernard.com/jobs',
+              specialization: 'Modern Web, React, Node.js, Cloud & DevOps',
+              location: 'London & Remote UK',
+              description: 'Boutique tech recruitment agency partnering with high-growth startups, fintechs, and tech innovators.',
+              rolesTypicallyPlaced: [detectedTitle, 'Lead Developer', 'Full Stack Specialist'],
+              contactEmail: 'info@oliverbernard.com',
+              contactPhone: '+44 20 7078 6800',
+              directOutreachTip: 'Contact their engineering recruitment desk directly for exclusive unadvertised fintech and tech roles.'
+            },
+            {
+              id: 'agency-roberthalf',
+              name: 'Robert Half Talent Solutions',
+              website: 'https://www.roberthalf.co.uk',
+              contactUrl: 'https://www.roberthalf.co.uk/submit-your-cv',
+              specialization: 'Technology, Enterprise Digital & Digital Transformation',
+              location: 'London & Regional Hubs',
+              description: 'Global talent consultancy matching candidates with hiring managers looking for proven industry experience.',
+              rolesTypicallyPlaced: [detectedTitle, 'Systems Consultant', 'Senior Developer'],
+              contactEmail: 'recruitment@roberthalf.co.uk',
+              contactPhone: '+44 20 7389 6900',
+              directOutreachTip: 'Attach your ATS-tailored resume generated by Zap to emphasize your exact verified experience.'
+            }
+          ]
+        : [
+            {
+              id: 'agency-roberthalf-global',
+              name: 'Robert Half Technology',
+              website: 'https://www.roberthalf.com',
+              contactUrl: 'https://www.roberthalf.com/jobs',
+              specialization: 'Software Engineering, Cloud & Digital Transformation',
+              location: detectedLocation,
+              description: 'Global specialized talent solutions placing experienced professionals directly with enterprise clients.',
+              rolesTypicallyPlaced: [detectedTitle, 'Lead Engineer', 'Full Stack Specialist'],
+              contactEmail: 'inquiries@roberthalf.com',
+              contactPhone: '+1 888 744 4002',
+              directOutreachTip: 'Upload your verified CV directly to their recruiter portal with your portfolio links.'
+            },
+            {
+              id: 'agency-hays-global',
+              name: 'Hays Specialist Recruitment',
+              website: 'https://www.hays.com',
+              contactUrl: 'https://www.hays.com/jobs',
+              specialization: 'Technology, Engineering & Corporate Roles',
+              location: detectedLocation,
+              description: 'Global recruitment leader connecting qualified candidates directly to hiring decision makers.',
+              rolesTypicallyPlaced: [detectedTitle, 'Senior Engineer', 'Technical Specialist'],
+              contactEmail: 'info@hays.com',
+              contactPhone: '+1 800 803 4297',
+              directOutreachTip: 'Contact an industry-specialized consultant directly via email with your tailored STAR statements.'
+            }
+          ];
 
-      let directApplyUrl = job.applyUrl;
-      if (!directApplyUrl || !directApplyUrl.startsWith('http')) {
+      agenciesArray = [...agenciesArray, ...defaultAgencies.slice(0, 4 - agenciesArray.length)];
+    }
+
+    // Enrich jobs with direct company website URLs and multi-channel portal search links
+    const enrichedJobs = jobsArray.map((job: any, index: number) => {
+      const companyClean = typeof job.company === 'string' && job.company.trim() ? job.company.trim() : 'Leading Hiring Employer';
+      const titleClean = typeof job.title === 'string' && job.title.trim() ? job.title.trim() : detectedTitle;
+
+      // Direct Company Careers Page URL
+      const directCareersSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(companyClean + ' official careers ' + titleClean + ' direct jobs apply')}`;
+      const companyCareersUrl = (typeof job.companyCareersUrl === 'string' && job.companyCareersUrl.startsWith('http'))
+        ? job.companyCareersUrl
+        : directCareersSearchUrl;
+
+      // Primary Apply URL: If direct company careers provided, prioritize it, otherwise fallback to high-relevance direct board search
+      let primaryApplyUrl = companyCareersUrl;
+      if (!primaryApplyUrl || primaryApplyUrl.includes('google.com/search')) {
         if (isUK) {
-          directApplyUrl = `https://uk.indeed.com/jobs?q=${encodeURIComponent(titleClean + ' ' + companyClean)}&l=${encodedLoc}`;
+          primaryApplyUrl = `https://uk.indeed.com/jobs?q=${encodeURIComponent(titleClean + ' ' + companyClean)}&l=${encodedLoc}`;
         } else {
-          directApplyUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(titleClean + ' ' + companyClean)}&location=${encodedLoc}`;
+          primaryApplyUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(titleClean + ' ' + companyClean)}&location=${encodedLoc}`;
         }
       }
 
@@ -867,23 +1005,55 @@ Respond strictly with valid JSON only matching this exact schema:
         company: companyClean,
         location: job.location || detectedLocation,
         workMode: (['Remote', 'Hybrid', 'On-site'].includes(job.workMode)) ? job.workMode : 'Hybrid',
-        salaryRange: job.salaryRange || (isUK ? '£60,000 - £80,000' : '$105,000 - $135,000'),
+        salaryRange: job.salaryRange || (isUK ? '£65,000 - £85,000' : '$110,000 - $140,000'),
         experienceRequired: job.experienceRequired || detectedYears,
         matchScore: typeof job.matchScore === 'number' ? Math.min(Math.max(job.matchScore, 82), 99) : 95,
-        description: job.description || `Exciting opportunity for a ${titleClean} to drive core impact at ${companyClean}.`,
+        description: job.description || `Direct vacancy for a ${titleClean} to drive strategic development at ${companyClean}.`,
         matchedSkills: Array.isArray(job.matchedSkills) && job.matchedSkills.length > 0
           ? job.matchedSkills
-          : (Array.isArray(skills) && skills.length > 0 ? skills.slice(0, 4) : ['Problem Solving', 'Leadership', 'Execution']),
-        source: job.source || (index % 2 === 0 ? 'LinkedIn Jobs' : 'Indeed'),
-        postedDate: job.postedDate || `${(index % 4) + 1}d ago`,
+          : (Array.isArray(skills) && skills.length > 0 ? skills.slice(0, 4) : ['Strategic Execution', 'Domain Leadership', 'Problem Solving']),
+        source: job.source || 'Company Direct Careers',
+        isDirectEmployer: true,
+        companyCareersUrl: companyCareersUrl,
+        postedDate: job.postedDate || `${(index % 3) + 1}d ago`,
         urgency: job.urgency || (index === 0 ? 'High Match' : 'Actively Hiring'),
-        applyUrl: directApplyUrl,
+        applyUrl: primaryApplyUrl,
         portalLinks: {
-          linkedin: `https://www.linkedin.com/jobs/search/?keywords=${encodedTitle}&location=${encodedLoc}`,
-          indeed: isUK ? `https://uk.indeed.com/jobs?q=${encodedTitle}&l=${encodedLoc}` : `https://www.indeed.com/jobs?q=${encodedTitle}&l=${encodedLoc}`,
+          companySite: directCareersSearchUrl,
+          linkedin: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(titleClean + ' ' + companyClean)}&location=${encodedLoc}`,
+          indeed: isUK
+            ? `https://uk.indeed.com/jobs?q=${encodeURIComponent(titleClean + ' ' + companyClean)}&l=${encodedLoc}`
+            : `https://www.indeed.com/jobs?q=${encodeURIComponent(titleClean + ' ' + companyClean)}&l=${encodedLoc}`,
           googleJobs: `https://www.google.com/search?q=${encodeURIComponent(titleClean + ' ' + companyClean + ' jobs apply')}&ibp=htl;jobs`,
           reed: isUK ? `https://www.reed.co.uk/jobs/${encodeURIComponent(detectedTitle.toLowerCase().replace(/\s+/g, '-'))}-jobs` : undefined
         }
+      };
+    });
+
+    // Enrich recruitment agencies with direct mailto & portal links
+    const enrichedAgencies = agenciesArray.map((agency: any, index: number) => {
+      const agencyName = typeof agency.name === 'string' && agency.name.trim() ? agency.name.trim() : 'Specialist Recruitment Agency';
+      const agencyWebsite = typeof agency.website === 'string' && agency.website.startsWith('http')
+        ? agency.website
+        : `https://www.google.com/search?q=${encodeURIComponent(agencyName + ' recruitment official website')}`;
+      const contactUrl = typeof agency.contactUrl === 'string' && agency.contactUrl.startsWith('http')
+        ? agency.contactUrl
+        : agencyWebsite;
+
+      return {
+        id: agency.id || `agency-${index + 1}-${Date.now()}`,
+        name: agencyName,
+        website: agencyWebsite,
+        contactUrl: contactUrl,
+        specialization: agency.specialization || `${detectedTitle} & Industry Talent Placement`,
+        location: agency.location || detectedLocation,
+        description: agency.description || `Specialist recruitment firm actively placing ${detectedTitle} candidates directly with employer clients.`,
+        rolesTypicallyPlaced: Array.isArray(agency.rolesTypicallyPlaced) && agency.rolesTypicallyPlaced.length > 0
+          ? agency.rolesTypicallyPlaced
+          : [detectedTitle, 'Lead Specialist', 'Senior Consultant'],
+        contactEmail: agency.contactEmail || `recruitment@${agencyName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'agency'}.com`,
+        contactPhone: agency.contactPhone || (isUK ? '+44 20 7946 0199' : '+1 800 555 0199'),
+        directOutreachTip: agency.directOutreachTip || `Email their specialist recruitment team directly referencing your verified ${detectedYears} experience.`
       };
     });
 
@@ -891,12 +1061,15 @@ Respond strictly with valid JSON only matching this exact schema:
       success: true,
       data: {
         jobs: enrichedJobs,
+        recruitmentAgencies: enrichedAgencies,
         queryInfo: {
           jobTitle: detectedTitle,
           yearsOfExperience: detectedYears,
           location: detectedLocation
         },
         globalPortals: {
+          directCompanySearch: `https://www.google.com/search?q=${encodeURIComponent(detectedTitle + ' careers direct apply hiring ' + detectedLocation)}`,
+          recruitmentAgenciesSearch: `https://www.google.com/search?q=${encodeURIComponent('best ' + detectedTitle + ' recruitment agencies headhunters ' + detectedLocation)}`,
           linkedin: `https://www.linkedin.com/jobs/search/?keywords=${encodedTitle}&location=${encodedLoc}`,
           indeed: isUK ? `https://uk.indeed.com/jobs?q=${encodedTitle}&l=${encodedLoc}` : `https://www.indeed.com/jobs?q=${encodedTitle}&l=${encodedLoc}`,
           googleJobs: `https://www.google.com/search?q=${encodeURIComponent(detectedTitle + ' jobs ' + detectedLocation + ' apply')}&ibp=htl;jobs`,
